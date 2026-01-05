@@ -38,7 +38,7 @@ If you want to support me and the development of this project, you can donate to
 - Server can be started from the Server tab with configuration options for network access and auto-start.
 - Share your InferrLM chat interface with computers, tablets, or other devices through a simple URL or QR code.
 - Full API documentation is available [HERE](docs/REST_APIs.md) and at the server homepage when running.
-- A command-line interface tool is available at [github.com/sbhjt-gr/inferra-cli](https://github.com/sbhjt-gr/inferra-cli) that demonstrates how to build applications using these REST APIs.
+- A command-line interface tool is available at [github.com/sbhjt-gr/InferrLM-CLI](https://github.com/sbhjt-gr/InferrLM-CLI) that demonstrates how to build applications using these REST APIs.
 
 ### Model Management
 - Download manager that fetches models directly from HuggingFace. Cherry-picked model list optimized for running on edge devices available in Models -> Download Models tab.
@@ -53,7 +53,7 @@ If you want to support me and the development of this project, you can donate to
 - Real-time streaming responses for both local and remote models.
 
 ## Getting Started
-If you want to contribute or just try to run it locally, follow the guide below. Please adhere to the rules of the <a href="https://github.com/sbhjt-gr/inferra/blob/main/LICENSE">LICENSE</a> because you are not supposed to just `git clone` and pass it as your own work.
+If you want to contribute or just try to run it locally, follow the guide below. Please adhere to the rules of the <a href="https://github.com/sbhjt-gr/InferrLM/blob/main/LICENSE">LICENSE</a> because you are not supposed to just `git clone` and pass it as your own work.
 
 ### Prerequisites
 
@@ -67,8 +67,8 @@ If you want to contribute or just try to run it locally, follow the guide below.
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/sbhjt-gr/inferra
-   cd inferra
+   git clone https://github.com/sbhjt-gr/InferrLM
+   cd InferrLM
    ```
 
 2. **Install dependencies**
@@ -90,9 +90,9 @@ If you want to contribute or just try to run it locally, follow the guide below.
 
 ## Command Line Interface
 
-The inferra-cli tool is a terminal-based client that connects to your InferrLM server and provides an interactive chat interface directly from your command line. This serves as both a functional tool and a reference implementation for developers who want to build applications using the InferrLM REST APIs.
+The InferrLM-CLI tool is a terminal-based client that connects to your InferrLM server and provides an interactive chat interface directly from your command line. This serves as both a functional tool and a reference implementation for developers who want to build applications using the InferrLM REST APIs.
 
-The CLI is built with React and Ink to provide a modern terminal UI with features like streaming responses, conversation history, and an interactive setup flow. You can find the complete source code and installation instructions at [github.com/sbhjt-gr/inferra-cli](https://github.com/sbhjt-gr/inferra-cli).
+The CLI is built with React and Ink to provide a modern terminal UI with features like streaming responses, conversation history, and an interactive setup flow. You can find the complete source code and installation instructions at [github.com/sbhjt-gr/InferrLM-CLI](https://github.com/sbhjt-gr/InferrLM-CLI).
 
 To get started with the CLI, make sure your InferrLM server is running on your mobile device, then install the CLI tool and follow the setup instructions in its repository.
 
@@ -141,13 +141,13 @@ curl -X POST http://YOUR_DEVICE_IP:8889/api/files/ingest \
 
 ## License
 
-This project is distributed under the AGPL-3.0 License. Please read it [here](https://github.com/sbhjt-gr/inferra/blob/main/LICENSE). Any modifications must adhere to the rules of this LICENSE.
+This project is distributed under the AGPL-3.0 License. Please read it [here](https://github.com/sbhjt-gr/InferrLM/blob/main/LICENSE). Any modifications must adhere to the rules of this LICENSE.
 
 ## Contributing
 
 Contributions are welcome! Before starting work:
 
-1. Find an issue in the [issues](https://github.com/sbhjt-gr/inferra/issues) tab or create a new one
+1. Find an issue in the [issues](https://github.com/sbhjt-gr/InferrLM/issues) tab or create a new one
 2. Comment on the issue to express your interest
 3. Wait to be assigned before starting work
 
@@ -158,7 +158,7 @@ Read our [Contributing Guide](docs/CONTRIBUTING.md) for detailed contribution gu
 ## Acknowledgments
 
 - [llama.cpp](https://github.com/ggerganov/llama.cpp) - The default underlying engine for running local LLMs and it's the only one that's been implemented yet.
-- [inferra-llama.rn](https://github.com/sbhjt-gr/inferra-llama.rn) - The customized React Native adapter which provides the bridge for llama.cpp. Originally forked and self-hosted from [llama.rn](https://github.com/mybigday/llama.rn) for updating llama.cpp more frequently.
+- [inferrlm-llama.rn](https://github.com/sbhjt-gr/inferra-llama.rn) - The customized React Native adapter which provides the bridge for llama.cpp. Originally forked and self-hosted from [llama.rn](https://github.com/mybigday/llama.rn) for updating llama.cpp more frequently.
 - [react-native-rag](https://github.com/software-mansion-labs/react-native-rag) + [@langchain/textsplitters](https://github.com/langchain-ai/langchainjs) - RAG implementation for React Native that powers the document retrieval and ingestion features using LangChain.
 - [react-native-ai](https://github.com/callstackincubator/ai) - Adaptor that provides Apple Foundation bridge from Swift to JavaScript.
 - If someone thinks they also need to be mentioned here, please let me know.
@@ -168,7 +168,7 @@ Read our [Contributing Guide](docs/CONTRIBUTING.md) for detailed contribution gu
 - **React Native + Expo**: For cross-platform support.
 - **TypeScript**: The syntactical superset of JavaScript, widely used for React Development.
 - **Firebase**: For authentication, Firestore database, and cloud services.
-- **inferra-llama**: Custom llama.cpp bridge for local inference originally maintained by <a href="https://www.bricks.tools/" target="_blank">BRICS</a>.
+- **inferrlm-llama**: Custom llama.cpp bridge for local inference originally maintained by <a href="https://www.bricks.tools/" target="_blank">BRICS</a>.
 - **React Navigation**: For navigation and routing.
 - **React Native Paper**: Used for many Material Design UI components, although the whole UI is not purely based on the Material design.
 - **React Native ML Kit**: For on-device text recognition and OCR.
@@ -178,7 +178,7 @@ Read our [Contributing Guide](docs/CONTRIBUTING.md) for detailed contribution gu
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=sbhjt-gr/inferra&type=Date)](https://star-history.com/#sbhjt-gr/inferra&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=sbhjt-gr/InferrLM&type=Date)](https://star-history.com/#sbhjt-gr/InferrLM&Date)
 
 ---
 
