@@ -11,6 +11,7 @@ interface StoredModelProps {
   path: string;
   size: number;
   isProjector?: boolean;
+  isMLXGroup?: boolean;
   onDelete: (id: string, path: string) => void;
   onExport?: (path: string, name: string) => void;
   onSettings?: (path: string, name: string) => void;
@@ -39,13 +40,14 @@ const StoredModelItem: React.FC<StoredModelProps> = ({
   path,
   size,
   isProjector,
+  isMLXGroup,
   onDelete,
   onExport,
   onSettings,
 }) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
-  const displayName = getDisplayName(name);
+  const displayName = isMLXGroup ? name : getDisplayName(name);
   const formattedSize = formatBytes(size);
 
   return (
@@ -62,6 +64,12 @@ const StoredModelItem: React.FC<StoredModelProps> = ({
           <Text style={[styles.modelName, { color: themeColors.text }]} numberOfLines={1}>
             {displayName}
           </Text>
+          {isMLXGroup && (
+            <View style={styles.mlxBadgeContainer}>
+              <MaterialCommunityIcons name="apple" size={12} color="white" style={{ marginRight: 4 }} />
+              <Text style={styles.mlxBadgeText}>MLX</Text>
+            </View>
+          )}
           {isProjector && (
             <View style={styles.projectorBadgeContainer}>
               <MaterialCommunityIcons name="projector" size={12} color="white" style={{ marginRight: 4 }} />
@@ -144,6 +152,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginRight: 8,
+  },
+  mlxBadgeContainer: {
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 4,
+  },
+  mlxBadgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
   },
   projectorBadgeContainer: {
     backgroundColor: '#8e44ad',

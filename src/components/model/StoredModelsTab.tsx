@@ -31,6 +31,47 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
 
+  const groupMLXModels = (models: StoredModel[]): StoredModel[] => {
+    const mlxGroups: { [key: string]: StoredModel[] } = {};
+    const otherModels: StoredModel[] = [];
+
+    models.forEach(model => {
+      const nameParts = model.name.split('_');
+      if (nameParts.length >= 2 && (nameParts[0].includes('/') || model.name.toLowerCase().includes('mlx'))) {
+        const baseModelName = nameParts.slice(0, 2).join('_');
+        if (!mlxGroups[baseModelName]) {
+          mlxGroups[baseModelName] = [];
+        }
+        mlxGroups[baseModelName].push(model);
+      } else {
+        otherModels.push(model);
+      }
+    });
+
+    const groupedMLXModels: StoredModel[] = Object.entries(mlxGroups).map(([baseName, files]) => {
+      if (files.length === 1) {
+        return files[0];
+      }
+
+      const totalSize = files.reduce((sum, file) => sum + (file.size || 0), 0);
+      const firstFile = files[0];
+      const modelName = baseName.replace(/_/g, '/');
+
+      return {
+        ...firstFile,
+        name: modelName,
+        size: totalSize,
+        path: firstFile.path,
+        isMLXGroup: true,
+        mlxFiles: files,
+      } as StoredModel & { isMLXGroup?: boolean; mlxFiles?: StoredModel[] };
+    });
+
+    return [...groupedMLXModels, ...otherModels];
+  };
+
+  const displayModels = groupMLXModels(storedModels);
+
   const StoredModelsHeader = () => (
     <View style={styles.storedModelsHeader}>
       <View style={styles.storedHeaderActions}>
@@ -68,7 +109,7 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
     </View>
   );
 
-  const renderItem = ({ item }: { item: StoredModel }) => {
+  const renderItem = ({ item }: { item: StoredModel & { isMLXGroup?: boolean; mlxFiles?: StoredModel[] } }) => {
     const isProjectorModel = item.name.toLowerCase().includes('mmproj') ||
                             item.name.toLowerCase().includes('.proj');
     
@@ -79,6 +120,7 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
         path={item.path}
         size={item.size}
         isProjector={isProjectorModel}
+        isMLXGroup={item.isMLXGroup}
         onDelete={() => onDelete(item)}
         onExport={onExport}
         onSettings={onSettings}
@@ -88,7 +130,7 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
 
   return (
     <FlatList
-      data={storedModels}
+      data={displayModels}
       renderItem={renderItem}
       keyExtractor={item => item.path}
       contentContainerStyle={styles.list}
