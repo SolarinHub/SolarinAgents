@@ -31,7 +31,8 @@
         "buildType": "app-bundle"
       },
       "ios": {
-        "autoIncrement": false
+        "autoIncrement": false,
+        "image": "macos-sequoia-15.6-xcode-26.0"
       }
     }
   },
