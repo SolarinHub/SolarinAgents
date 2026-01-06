@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, ScrollView
 import { useTheme } from '../context/ThemeContext';
 import { theme } from '../constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Chip, Button } from 'react-native-paper';
 import { HFModelDetails, HFFile } from '../services/HuggingFaceService';
 import { huggingFaceService } from '../services/HuggingFaceService';
 import { ModelFormat } from '../types/models';
@@ -80,43 +79,27 @@ export default function ModelFilesDialog({
 
         <View style={styles.fileInfo}>
           <View style={styles.fileDetails}>
-            <Chip
-              mode="flat"
-              style={[styles.fileChip, styles.sizeChip]}
-              textStyle={styles.chipText}
-              icon="download"
-            >
-              {huggingFaceService.formatModelSize(file.size)}
-            </Chip>
+            <View style={[styles.fileChip, styles.sizeChip]}>
+              <MaterialCommunityIcons name="download" size={14} color={themeColors.text} style={styles.chipIcon} />
+              <Text style={[styles.chipText, { color: themeColors.text }]}>{huggingFaceService.formatModelSize(file.size)}</Text>
+            </View>
             {isGGUFModel && (
-              <Chip
-                mode="flat"
-                style={[styles.fileChip, styles.quantChip]}
-                textStyle={styles.chipText}
-                icon="cog"
-              >
-                {huggingFaceService.extractQuantization(file.filename)}
-              </Chip>
+              <View style={[styles.fileChip, styles.quantChip]}>
+                <MaterialCommunityIcons name="cog" size={14} color={themeColors.text} style={styles.chipIcon} />
+                <Text style={[styles.chipText, { color: themeColors.text }]}>{huggingFaceService.extractQuantization(file.filename)}</Text>
+              </View>
             )}
             {isMLXModel && isRequiredMLXFile(file.filename) && (
-              <Chip
-                mode="flat"
-                style={[styles.fileChip, styles.mlxRequiredChip]}
-                textStyle={styles.chipText}
-                icon="apple"
-              >
-                Required
-              </Chip>
+              <View style={[styles.fileChip, styles.mlxRequiredChip]}>
+                <MaterialCommunityIcons name="apple" size={14} color={themeColors.text} style={styles.chipIcon} />
+                <Text style={[styles.chipText, { color: themeColors.text }]}>Required</Text>
+              </View>
             )}
             {modelDetails?.hasVision && file.filename.toLowerCase().includes('mmproj') && (
-              <Chip
-                mode="flat"
-                style={[styles.fileChip, styles.projectionChip]}
-                textStyle={styles.chipText}
-                icon="eye-settings"
-              >
-                Projection
-              </Chip>
+              <View style={[styles.fileChip, styles.projectionChip]}>
+                <MaterialCommunityIcons name="eye-settings" size={14} color={themeColors.text} style={styles.chipIcon} />
+                <Text style={[styles.chipText, { color: themeColors.text }]}>Projection</Text>
+              </View>
             )}
           </View>
 
@@ -221,9 +204,9 @@ export default function ModelFilesDialog({
           </ScrollView>
 
           <View style={styles.footer}>
-            <Button mode="text" onPress={onClose} style={styles.closeActionButton}>
+            <TouchableOpacity onPress={onClose} style={styles.closeActionButton}>
               <Text style={[styles.closeActionText, { color: themeColors.primary }]}>Close</Text>
-            </Button>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -363,7 +346,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   fileChip: {
-    height: 28,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  chipIcon: {
+    marginRight: 2,
   },
   sizeChip: {
     backgroundColor: 'rgba(74, 6, 96, 0.1)',
@@ -414,7 +405,8 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0, 0, 0, 0.08)',
   },
   closeActionButton: {
-    minWidth: 80,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   closeActionText: {
     fontSize: 14,
