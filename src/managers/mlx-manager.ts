@@ -1,4 +1,4 @@
-import { LLM } from '@inferrlm/react-native-mlx';
+import { LLM } from 'react-native-nitro-mlx';
 import { EngineCaps, GenOpts, InferenceManager, Msg } from './inference-manager';
 
 const caps: EngineCaps = {
