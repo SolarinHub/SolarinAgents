@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { huggingFaceService, HFModel, HFModelDetails } from '../services/HuggingFaceService';
@@ -41,6 +41,19 @@ export const useUnifiedModelList = (
   } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [forceRender, setForceRender] = useState(0);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchHuggingFace(searchQuery);
+      } else {
+        setHfModels([]);
+        setShowingHfResults(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const showDialog = (title: string, message: string) => {
     setDialogTitle(title);
@@ -124,12 +137,6 @@ export const useUnifiedModelList = (
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      searchHuggingFace(query);
-    } else {
-      setHfModels([]);
-      setShowingHfResults(false);
-    }
   };
 
   const clearSearch = () => {
