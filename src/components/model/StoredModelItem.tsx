@@ -79,7 +79,7 @@ const StoredModelItem: React.FC<StoredModelProps> = ({
         </View>
         <View style={styles.modelMetaInfo}>
           <View style={styles.metaItem}>
-            <MaterialCommunityIcons name="disc" size={14} color={themeColors.secondaryText} />
+            <MaterialCommunityIcons name="download" size={14} color={themeColors.secondaryText} />
             <Text style={[styles.metaText, { color: themeColors.secondaryText }]}>
               {formattedSize}
             </Text>

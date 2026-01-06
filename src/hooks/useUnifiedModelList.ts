@@ -176,6 +176,47 @@ export const useUnifiedModelList = (
       return;
     }
 
+    if (hfModel.modelFormat === ModelFormat.MLX) {
+      setModelDetailsLoading(true);
+      try {
+        const details = await huggingFaceService.getModelDetails(hfModel.id);
+        
+        if (!details.mlxFileGroup || details.mlxFileGroup.required.length === 0) {
+          showDialog('Error', 'Could not find required MLX files');
+          return;
+        }
+
+        const hideWarning = await AsyncStorage.getItem('hideModelWarning');
+        const filesToDownload = details.mlxFileGroup.required.map(file => ({
+          filename: file.rfilename,
+          downloadUrl: file.url || '',
+          size: file.size || 0,
+        }));
+
+        const startMLXDownload = async () => {
+          await proceedWithMultipleDownloads(filesToDownload, details.id);
+        };
+
+        if (hideWarning === 'true') {
+          await startMLXDownload();
+        } else {
+          setPendingDownload({ 
+            filename: `${filesToDownload.length} MLX files`, 
+            downloadUrl: '', 
+            modelId: details.id,
+            filesToDownload: filesToDownload
+          });
+          setShowWarningDialog(true);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        showDialog('Error', `Failed to load model details: ${errorMessage}`);
+      } finally {
+        setModelDetailsLoading(false);
+      }
+      return;
+    }
+
     await handleModelPress(hfModel);
   };
 
