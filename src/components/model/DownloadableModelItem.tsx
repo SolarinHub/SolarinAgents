@@ -167,7 +167,7 @@ const DownloadableModelItem: React.FC<DownloadableModelItemProps> = ({
               <TouchableOpacity
                 style={[
                   styles.downloadButton, 
-                  { backgroundColor: '#4a0660' },
+                  { backgroundColor: themeColors.primary },
                   (isDownloading || isInitializing || isDownloaded) && { opacity: 0.5 }
                 ]}
                 onPress={() => onDownload(model)}
@@ -184,7 +184,7 @@ const DownloadableModelItem: React.FC<DownloadableModelItemProps> = ({
                           : "cloud-download"
                   } 
                   size={20} 
-                  color="#fff" 
+                  color={themeColors.headerText} 
                 />
               </TouchableOpacity>
             </View>
