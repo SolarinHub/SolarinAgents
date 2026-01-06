@@ -121,12 +121,16 @@ const DownloadableModelItem: React.FC<DownloadableModelItemProps> = ({
                 {model.name.replace(/ \([^)]+\)$/, '')}
               </Text>
               <View style={styles.modelBadgesContainer}>
-                <View style={[styles.modelFamily, { backgroundColor: getThemeAwareColor('#4a0660', currentTheme) }]}>
-                  <Text style={styles.modelFamilyText}>{model.modelFamily}</Text>
-                </View>
-                <View style={[styles.modelQuantization, { backgroundColor: getThemeAwareColor('#2c7fb8', currentTheme) }]}>
-                  <Text style={styles.modelQuantizationText}>{model.quantization}</Text>
-                </View>
+                {model.modelFamily && (
+                  <View style={[styles.modelFamily, { backgroundColor: getThemeAwareColor('#4a0660', currentTheme) }]}>
+                    <Text style={styles.modelFamilyText}>{model.modelFamily}</Text>
+                  </View>
+                )}
+                {model.quantization && (
+                  <View style={[styles.modelQuantization, { backgroundColor: getThemeAwareColor('#2c7fb8', currentTheme) }]}>
+                    <Text style={styles.modelQuantizationText}>{model.quantization}</Text>
+                  </View>
+                )}
                 {model.tags?.includes('fastest') && (
                   <View style={[styles.modelTag, { backgroundColor: getThemeAwareColor('#00a67e', currentTheme) }]}>
                     <MaterialCommunityIcons name="flash" size={12} color={themeColors.headerText} style={{ marginRight: 4 }} />

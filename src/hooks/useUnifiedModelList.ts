@@ -60,39 +60,6 @@ export const useUnifiedModelList = (
     const modelId = hfModel.id;
     const modelName = modelId.split('/').pop() || modelId;
     
-    const getModelFamily = (id: string) => {
-      const lowerName = id.toLowerCase();
-      if (lowerName.includes('llama')) return 'Llama';
-      if (lowerName.includes('mistral')) return 'Mistral';
-      if (lowerName.includes('phi')) return 'Phi';
-      if (lowerName.includes('gemma')) return 'Gemma';
-      if (lowerName.includes('qwen')) return 'Qwen';
-      if (lowerName.includes('vicuna')) return 'Vicuna';
-      if (lowerName.includes('orca')) return 'Orca';
-      if (lowerName.includes('falcon')) return 'Falcon';
-      if (lowerName.includes('alpaca')) return 'Alpaca';
-      if (lowerName.includes('codellama')) return 'CodeLlama';
-      return 'Other';
-    };
-
-    const getQuantization = (name: string) => {
-      const lowerName = name.toLowerCase();
-      if (lowerName.includes('q8_0')) return 'Q8_0';
-      if (lowerName.includes('q6_k')) return 'Q6_K';
-      if (lowerName.includes('q5_k_m')) return 'Q5_K_M';
-      if (lowerName.includes('q5_0')) return 'Q5_0';
-      if (lowerName.includes('q4_k_m')) return 'Q4_K_M';
-      if (lowerName.includes('q4_0')) return 'Q4_0';
-      if (lowerName.includes('q3_k_m')) return 'Q3_K_M';
-      if (lowerName.includes('q2_k')) return 'Q2_K';
-      if (lowerName.includes('iq4_nl')) return 'IQ4_NL';
-      if (lowerName.includes('iq3_m')) return 'IQ3_M';
-      if (lowerName.includes('iq2_m')) return 'IQ2_M';
-      if (lowerName.includes('f16')) return 'F16';
-      if (lowerName.includes('f32')) return 'F32';
-      return 'Mixed';
-    };
-
     const tags = [];
     if (hfModel.hasVision) {
       tags.push('vision');
@@ -111,8 +78,8 @@ export const useUnifiedModelList = (
       size: `${hfModel.downloads || 0} downloads`,
       huggingFaceLink: `https://huggingface.co/${modelId}`,
       licenseLink: '',
-      modelFamily: getModelFamily(modelId),
-      quantization: getQuantization(modelId),
+      modelFamily: '',
+      quantization: '',
       tags: tags,
       modelType: hfModel.hasVision ? 'vision' as any : undefined,
       capabilities: hfModel.capabilities,
