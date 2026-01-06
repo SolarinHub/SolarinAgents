@@ -31,7 +31,7 @@ export default {
       bundleIdentifier: "com.gorai.inferra",
       buildNumber: "281",
       runtimeVersion: "0.7.9",
-      deploymentTarget: "17.0",
+      deploymentTarget: "26.0",
       infoPlist: {
         UIBackgroundModes: [
           "fetch",
@@ -135,7 +135,7 @@ export default {
             "targetSdkVersion": 36
           },
           "ios": {
-            "deploymentTarget": "17.0"
+            "deploymentTarget": "26.0"
           }
         }
       ],
