@@ -31,6 +31,8 @@ class MlxManager implements InferenceManager {
 
   private async validateMLXModel(modelPath: string): Promise<boolean> {
     try {
+      console.log('mlx_validate_start', { modelPath });
+      
       const requiredFiles = [
         'config.json',
         'tokenizer.json',
@@ -41,27 +43,39 @@ class MlxManager implements InferenceManager {
         ? modelPath.substring(0, modelPath.lastIndexOf('/'))
         : modelPath;
 
+      console.log('mlx_validate_dirpath', { dirPath, isFile: modelPath.endsWith('.safetensors') || modelPath.endsWith('.npz') });
+
+      const dirInfo = await FileSystem.getInfoAsync(dirPath);
+      console.log('mlx_dir_info', { exists: dirInfo.exists, isDirectory: dirInfo.isDirectory });
+      
+      if (!dirInfo.exists || !dirInfo.isDirectory) {
+        console.log('mlx_dir_not_found');
+        return false;
+      }
+
+      const files = await FileSystem.readDirectoryAsync(dirPath);
+      console.log('mlx_dir_files', { filesCount: files.length, files });
+
       for (const file of requiredFiles) {
-        const filePath = `${dirPath}/${file}`;
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        if (!fileInfo.exists) {
+        const found = files.some((f: string) => f.endsWith(file));
+        console.log('mlx_file_check', { file, found, matchingFiles: files.filter((f: string) => f.endsWith(file)) });
+        if (!found) {
           console.log('mlx_missing_file', file);
           return false;
         }
       }
 
-      const dirInfo = await FileSystem.getInfoAsync(dirPath);
-      if (dirInfo.exists && dirInfo.isDirectory) {
-        const files = await FileSystem.readDirectoryAsync(dirPath);
-        const hasWeights = files.some((f: string) => 
-          f.endsWith('.safetensors') || f.endsWith('.npz')
-        );
-        if (!hasWeights) {
-          console.log('mlx_missing_weights');
-          return false;
-        }
+      const hasWeights = files.some((f: string) => 
+        f.endsWith('.safetensors') || f.endsWith('.npz')
+      );
+      console.log('mlx_weights_check', { hasWeights, weightFiles: files.filter((f: string) => f.endsWith('.safetensors') || f.endsWith('.npz')) });
+      
+      if (!hasWeights) {
+        console.log('mlx_missing_weights');
+        return false;
       }
 
+      console.log('mlx_validation_success');
       return true;
     } catch (error) {
       console.log('mlx_validation_error', error);
