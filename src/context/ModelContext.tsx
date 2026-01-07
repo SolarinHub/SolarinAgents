@@ -55,10 +55,20 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     try {
       const engine = engineService.get();
-      const isGguf = modelPath.toLowerCase().endsWith('.gguf');
+      const pathLower = modelPath.toLowerCase();
+      const isGguf = pathLower.endsWith('.gguf');
+      const isSafetensors = pathLower.endsWith('.safetensors') || 
+                           pathLower.includes('/models/mlx/') ||
+                           pathLower.includes('mlx-community');
 
       if (engine === 'mlx' && isGguf) {
-        showSnackbar('MLX engine does not support GGUF models', 'error');
+        showSnackbar('MLX engine requires safetensors format', 'error');
+        setIsModelLoading(false);
+        return false;
+      }
+
+      if (engine === 'llama' && isSafetensors) {
+        showSnackbar('Llama.cpp requires GGUF format', 'error');
         setIsModelLoading(false);
         return false;
       }
@@ -86,12 +96,21 @@ export const ModelProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updateProjectorState();
       
       const modelName = modelPath.split('/').pop() || 'Model';
+      const engineLabel = engine === 'mlx' ? ' (MLX)' : '';
       const multimodalText = mmProjectorPath ? ' (Multimodal)' : '';
-      showSnackbar(`${modelName}${multimodalText} loaded successfully`);
+      showSnackbar(`${modelName}${engineLabel}${multimodalText} loaded successfully`);
 
       return true;
     } catch (error) {
-      showSnackbar('Error loading model', 'error');
+      console.log('model_load_error', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMsg.includes('mlx_model_invalid_structure')) {
+        showSnackbar('MLX model missing required files', 'error');
+      } else {
+        showSnackbar('Error loading model', 'error');
+      }
+      
       setSelectedModelPath(null);
       setSelectedProjectorPath(null);
       setIsMultimodalEnabled(false);

@@ -1,5 +1,6 @@
-import { LLM } from 'react-native-nitro-mlx';
+import { LLM, ModelManager } from 'react-native-nitro-mlx';
 import { EngineCaps, GenOpts, InferenceManager, Msg } from './inference-manager';
+import * as FileSystem from 'expo-file-system';
 
 const caps: EngineCaps = {
   embeddings: false,
@@ -14,16 +15,84 @@ const caps: EngineCaps = {
 };
 
 type State = {
-  loaded: boolean;
-  modelId: string;
+  loaded: boolean,
+  modelId: string,
+  modelPath: string,
 };
 
 class MlxManager implements InferenceManager {
-  private state: State = { loaded: false, modelId: '' };
+  private state: State = { loaded: false, modelId: '', modelPath: '' };
+
+  private extractModelId(modelPath: string): string {
+    const parts = modelPath.split('/');
+    const lastPart = parts[parts.length - 1] || parts[parts.length - 2];
+    return lastPart.replace(/_/g, '/');
+  }
+
+  private async validateMLXModel(modelPath: string): Promise<boolean> {
+    try {
+      const requiredFiles = [
+        'config.json',
+        'tokenizer.json',
+        'tokenizer_config.json',
+      ];
+
+      const dirPath = modelPath.endsWith('.safetensors') || modelPath.endsWith('.npz')
+        ? modelPath.substring(0, modelPath.lastIndexOf('/'))
+        : modelPath;
+
+      for (const file of requiredFiles) {
+        const filePath = `${dirPath}/${file}`;
+        const fileInfo = await FileSystem.getInfoAsync(filePath);
+        if (!fileInfo.exists) {
+          console.log('mlx_missing_file', file);
+          return false;
+        }
+      }
+
+      const dirInfo = await FileSystem.getInfoAsync(dirPath);
+      if (dirInfo.exists && dirInfo.isDirectory) {
+        const files = await FileSystem.readDirectoryAsync(dirPath);
+        const hasWeights = files.some((f: string) => 
+          f.endsWith('.safetensors') || f.endsWith('.npz')
+        );
+        if (!hasWeights) {
+          console.log('mlx_missing_weights');
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.log('mlx_validation_error', error);
+      return false;
+    }
+  }
 
   async init(modelPath: string) {
-    await LLM.load(modelPath, {} as any);
-    this.state = { loaded: true, modelId: modelPath };
+    console.log('mlx_init_start', modelPath);
+    
+    const isValid = await this.validateMLXModel(modelPath);
+    if (!isValid) {
+      throw new Error('mlx_model_invalid_structure');
+    }
+
+    const modelId = this.extractModelId(modelPath);
+    console.log('mlx_model_id', modelId);
+
+    try {
+      await LLM.load(modelId, {
+        onProgress: (progress) => {
+          console.log('mlx_loading_progress', progress);
+        },
+      });
+      
+      this.state = { loaded: true, modelId, modelPath };
+      console.log('mlx_init_complete');
+    } catch (error) {
+      console.log('mlx_init_error', error);
+      throw error;
+    }
   }
 
   async gen(messages: Msg[], opts?: GenOpts) {
@@ -49,8 +118,16 @@ class MlxManager implements InferenceManager {
 
   async release() {
     if (this.state.loaded) {
-      LLM.unload();
-      this.state = { loaded: false, modelId: '' };
+      try {
+        console.log('mlx_unload_start');
+        LLM.stop();
+        await new Promise(resolve => setTimeout(resolve, 100));
+        this.state = { loaded: false, modelId: '', modelPath: '' };
+        console.log('mlx_unload_complete');
+      } catch (error) {
+        console.log('mlx_unload_error', error);
+        this.state = { loaded: false, modelId: '', modelPath: '' };
+      }
     }
   }
 

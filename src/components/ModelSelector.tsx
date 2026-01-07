@@ -1,7 +1,6 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
 import {
   View,
-  StyleSheet,
   TouchableOpacity,
   Modal,
   ActivityIndicator,
@@ -26,56 +25,13 @@ import { RootStackParamList } from '../types/navigation';
 import { appleFoundationService } from '../services/AppleFoundationService';
 import type { ProviderType } from '../services/ModelManagementService';
 import { useStoredModels } from '../hooks/useStoredModels';
+import type { StoredModel, OnlineModel, AppleFoundationModel, MLXGroup, Model, ModelSelectorRef, ModelSelectorProps, SectionData } from './ModelSelector.types';
+import { ONLINE_MODELS } from './ModelSelector.constants';
+import { formatBytes, getDisplayName, getModelNameFromPath, getProjectorNameFromPath, isMLXModel, groupMLXModels, getActiveModelIcon, getConnectionBadgeConfig } from './ModelSelector.utils';
+import { styles } from './ModelSelector.styles';
+import { renderAppleFoundationItem, renderLocalModelItem, renderOnlineModelItem, renderSectionHeader, renderItem, type RenderContext } from './ModelSelector.renderers';
 
-interface StoredModel {
-  name: string;
-  path: string;
-  size: number;
-  modified: string;
-  isExternal?: boolean;
-  originalPath?: string;
-}
-
-interface OnlineModel {
-  id: string;
-  name: string;
-  provider: string;
-  isOnline: true;
-}
-
-interface AppleFoundationModel {
-  id: string;
-  name: string;
-  provider: string;
-  isAppleFoundation: true;
-}
-
-type Model = StoredModel | OnlineModel | AppleFoundationModel;
-
-export interface ModelSelectorRef {
-  refreshModels: () => void;
-}
-
-interface ModelSelectorProps {
-  isOpen?: boolean;
-  onClose?: () => void;
-  preselectedModelPath?: string | null;
-  isGenerating?: boolean;
-  onModelSelect?: (provider: ProviderType, modelPath?: string, projectorPath?: string) => void | Promise<void>;
-  navigation?: NativeStackNavigationProp<RootStackParamList>;
-}
-
-const ONLINE_MODELS: OnlineModel[] = [
-  { id: 'gemini', name: 'Gemini', provider: 'Google', isOnline: true },
-  { id: 'chatgpt', name: 'ChatGPT', provider: 'OpenAI', isOnline: true },
-  { id: 'deepseek', name: 'DeepSeek', provider: 'DeepSeek', isOnline: true },
-  { id: 'claude', name: 'Claude', provider: 'Anthropic', isOnline: true },
-];
-
-interface SectionData {
-  title: string;
-  data: Model[];
-}
+export type { ModelSelectorRef } from './ModelSelector.types';
 
 const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorProps>(
   ({ isOpen, onClose, preselectedModelPath, isGenerating, onModelSelect, navigation: propNavigation }, ref) => {
@@ -107,6 +63,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     const [selectedVisionModel, setSelectedVisionModel] = useState<Model | null>(null);
   const [appleFoundationEnabled, setAppleFoundationEnabled] = useState(false);
   const [appleFoundationAvailable, setAppleFoundationAvailable] = useState(false);
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
     const hideDialog = () => setDialogVisible(false);
 
@@ -123,6 +80,18 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
     const toggleOnlineModelsDropdown = () => {
       setIsOnlineModelsExpanded(!isOnlineModelsExpanded);
+    };
+
+    const toggleGroup = (key: string) => {
+      setExpandedGroups(prev => {
+        const next = new Set(prev);
+        if (next.has(key)) {
+          next.delete(key);
+        } else {
+          next.add(key);
+        }
+        return next;
+      });
     };
 
     const refreshAppleFoundationState = async () => {
@@ -146,14 +115,22 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       const completedModels = models.filter(model => {
         const isProjectorModel = model.name.toLowerCase().includes('mmproj') ||
                                  model.name.toLowerCase().includes('.proj');
-
         return !isProjectorModel;
+      });
+
+      const filteredByEngine = completedModels.filter(model => {
+        const isMLX = isMLXModel(model);
+        if (engine === 'mlx') {
+          return isMLX;
+        } else {
+          return !isMLX;
+        }
       });
 
       const sectionsData: SectionData[] = [];
       const localModels: Model[] = [];
 
-      if (Platform.OS === 'ios' && appleFoundationEnabled && appleFoundationAvailable) {
+      if (Platform.OS === 'ios' && appleFoundationEnabled && appleFoundationAvailable && engine === 'llama') {
         localModels.push({
           id: 'apple-foundation',
           name: 'Apple Foundation',
@@ -162,7 +139,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         });
       }
 
-      localModels.push(...completedModels);
+      const groupedModels = engine === 'mlx' ? groupMLXModels(filteredByEngine) : filteredByEngine;
+
+      localModels.push(...groupedModels);
 
       if (localModels.length > 0) {
         sectionsData.push({ title: 'Local Models', data: localModels });
@@ -170,7 +149,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
       sectionsData.push({ title: 'Remote Models', data: ONLINE_MODELS });
       return sectionsData;
-    }, [models, appleFoundationEnabled, appleFoundationAvailable]);
+    }, [models, appleFoundationEnabled, appleFoundationAvailable, engine]);
 
     useEffect(() => {
       engineService.load().then(setEngine).catch(() => {});
@@ -280,7 +259,16 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         if (engine === 'llama' && (pathLower.endsWith('.safetensors') || nameLower.endsWith('.safetensors'))) {
           showDialog(
             'Unsupported Model Format',
-            'safetensors models are not supported by llama.cpp. Switch to MLX or select a GGUF model.',
+            'safetensors models are not supported by llama.cpp. Switch to MLX engine in Settings to use this model.',
+            [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          );
+          return;
+        }
+
+        if (engine === 'mlx' && pathLower.endsWith('.gguf')) {
+          showDialog(
+            'Unsupported Model Format',
+            'GGUF models are not supported by MLX engine. Switch to llama.cpp engine in Settings to use this model.',
             [<Button key="ok" onPress={hideDialog}>OK</Button>]
           );
           return;
@@ -499,420 +487,29 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       );
     };
 
-    const formatBytes = (bytes: number) => {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B ', 'KB ', 'MB ', 'GB '];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-    };
-
-    const getDisplayName = (filename: string) => {
-      return filename.split('.')[0];
-    };
-
-    const getModelNameFromPath = (path: string | null, models: StoredModel[]): string => {
-      if (!path) return 'Select a Model';
-      
-      if (path === 'gemini') return 'Gemini';
-      if (path === 'chatgpt') return 'ChatGPT';
-      if (path === 'deepseek') return 'DeepSeek';
-      if (path === 'claude') return 'Claude';
-      if (path === 'apple-foundation') return 'Apple Foundation';
-      
-      const model = models.find(m => m.path === path);
-      return model ? getDisplayName(model.name) : getDisplayName(path.split('/').pop() || '');
-    };
-
-    const getProjectorNameFromPath = (path: string | null, models: StoredModel[]): string => {
-      if (!path) return '';
-      
-      const model = models.find(m => m.path === path);
-      return model ? getDisplayName(model.name) : getDisplayName(path.split('/').pop() || '');
-    };
-
-    const remoteProviders = new Set<ProviderType>(['gemini', 'chatgpt', 'deepseek', 'claude']);
-
-    const isRemoteProvider = (provider: string | null): boolean => {
-      if (!provider) return false;
-      return remoteProviders.has(provider as ProviderType);
-    };
-
-    const isAppleProvider = (provider: string | null): boolean => provider === 'apple-foundation';
-
-    const getActiveModelIcon = (provider: string | null): keyof typeof MaterialCommunityIcons.glyphMap => {
-      if (!provider) return 'cube-outline';
-      if (isAppleProvider(provider)) return 'apple';
-      if (isRemoteProvider(provider)) return 'cloud';
-      return 'cube';
-    };
-
-    const getConnectionBadgeConfig = (provider: string | null) => {
-      if (isRemoteProvider(provider)) {
-        return {
-          backgroundColor: 'rgba(74, 180, 96, 0.15)',
-          textColor: '#2a8c42',
-          label: 'REMOTE'
-        };
-      }
-      if (isAppleProvider(provider)) {
-        return {
-          backgroundColor: 'rgba(74, 6, 96, 0.1)',
-          textColor: currentTheme === 'dark' ? '#fff' : '#660880',
-          label: 'APPLE'
-        };
-      }
-      return {
-        backgroundColor: 'rgba(74, 6, 96, 0.1)',
-        textColor: currentTheme === 'dark' ? '#fff' : '#660880',
-        label: 'LOCAL'
-      };
-    };
-
-    const renderAppleFoundationItem = ({ item }: { item: AppleFoundationModel }) => {
-      const isSelected = selectedModelPath === item.id;
-
-      return (
-        <TouchableOpacity
-          style={[
-            styles.modelItem,
-            { backgroundColor: themeColors.borderColor },
-            isSelected && styles.selectedModelItem,
-            isGenerating && styles.modelItemDisabled,
-          ]}
-          onPress={() => handleModelSelect(item)}
-          disabled={isGenerating}
-        >
-          <View style={styles.modelIconContainer}>
-            <MaterialCommunityIcons
-              name={isSelected ? 'apple' : 'apple'}
-              size={28}
-              color={isSelected ? (currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)) : currentTheme === 'dark' ? '#fff' : themeColors.text}
-            />
-          </View>
-          <View style={styles.modelInfo}>
-            <View style={styles.modelNameRow}>
-              <Text
-                style={[
-                  styles.modelName,
-                  { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-                  isSelected && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) },
-                ]}
-              >
-                {item.name}
-              </Text>
-              <View
-                style={[
-                  styles.connectionTypeBadge,
-                  { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(74, 6, 96, 0.1)' },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.connectionTypeText,
-                    { color: currentTheme === 'dark' ? '#fff' : '#4a0660' },
-                  ]}
-                >
-                  LOCAL
-                </Text>
-              </View>
-            </View>
-            <View style={styles.modelMetaInfo}>
-              <View
-                style={[
-                  styles.modelTypeBadge,
-                  {
-                    backgroundColor: isSelected
-                      ? currentTheme === 'dark'
-                        ? 'rgba(255, 255, 255, 0.15)'
-                        : 'rgba(74, 6, 96, 0.1)'
-                      : 'rgba(150, 150, 150, 0.1)',
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.modelTypeText,
-                    {
-                      color: isSelected
-                        ? currentTheme === 'dark'
-                          ? '#fff'
-                          : '#4a0660'
-                        : currentTheme === 'dark'
-                          ? '#fff'
-                          : themeColors.secondaryText,
-                    },
-                  ]}
-                >
-                  {item.provider}
-                </Text>
-              </View>
-            </View>
-          </View>
-          {isSelected && (
-            <View style={styles.selectedIndicator}>
-              <MaterialCommunityIcons
-                name="check-circle"
-                size={24}
-                color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)}
-              />
-            </View>
-          )}
-        </TouchableOpacity>
-      );
-    };
-
-    const renderLocalModelItem = ({ item }: { item: StoredModel }) => (
-      <TouchableOpacity
-        style={[
-          styles.modelItem,
-          { backgroundColor: themeColors.borderColor },
-          selectedModelPath === item.path && styles.selectedModelItem,
-          isGenerating && styles.modelItemDisabled
-        ]}
-        onPress={() => handleModelSelect(item)}
-        disabled={isGenerating}
-      >
-        <View style={styles.modelIconContainer}>
-          <MaterialCommunityIcons 
-            name={selectedModelPath === item.path ? "cube" : "cube-outline"} 
-            size={28} 
-            color={selectedModelPath === item.path ? 
-              currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) : 
-              currentTheme === 'dark' ? '#fff' : themeColors.text} 
-          />
-        </View>
-        <View style={styles.modelInfo}>
-          <View style={styles.modelNameRow}>
-            <Text style={[
-              styles.modelName, 
-              { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-              selectedModelPath === item.path && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) }
-            ]}>
-              {getDisplayName(item.name)}
-            </Text>
-            <View style={[
-              styles.connectionTypeBadge,
-              { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(74, 6, 96, 0.1)' }
-            ]}>
-              <Text style={[styles.connectionTypeText, { color: currentTheme === 'dark' ? '#fff' : '#4a0660' }]}>
-                LOCAL
-              </Text>
-            </View>
-          </View>
-          <View style={styles.modelMetaInfo}>
-            <Text style={[styles.modelDetails, { color: currentTheme === 'dark' ? '#fff' : themeColors.secondaryText }]}>
-              {formatBytes(item.size)}
-            </Text>
-          </View>
-        </View>
-        {selectedModelPath === item.path && (
-          <View style={styles.selectedIndicator}>
-            <MaterialCommunityIcons 
-              name="check-circle" 
-              size={24}
-              color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)} 
-            />
-          </View>
-        )}
-      </TouchableOpacity>
-    );
-    
-    const renderOnlineModelItem = ({ item }: { item: OnlineModel }) => {
-      const isSelected = selectedModelPath === item.id;
-      const hasApiKey = onlineModelStatuses[item.id];
-      const isRemoteModelsDisabled = !enableRemoteModels || !isLoggedIn;
-
-      return (
-        <TouchableOpacity
-          style={[
-            styles.modelItem,
-            { backgroundColor: themeColors.borderColor },
-            isSelected && styles.selectedModelItem,
-            isGenerating && styles.modelItemDisabled
-          ]}
-          onPress={() => handleModelSelect(item)}
-          disabled={isGenerating}
-        >
-          <View style={styles.modelIconContainer}>
-            <MaterialCommunityIcons 
-              name={isSelected ? "cloud" : "cloud-outline"} 
-              size={28} 
-              color={isSelected || hasApiKey ? 
-                currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) : 
-                currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} 
-            />
-          </View>
-          <View style={styles.modelInfo}>
-            <View style={styles.modelNameRow}>
-              <Text style={[
-                styles.modelName, 
-                { color: currentTheme === 'dark' ? '#fff' : themeColors.text },
-                isSelected && { color: currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme) }
-              ]}>
-                {item.name}
-              </Text>
-              <View style={[
-                styles.connectionTypeBadge,
-                { backgroundColor: currentTheme === 'dark' ? 'rgba(74, 180, 96, 0.25)' : 'rgba(74, 180, 96, 0.15)' }
-              ]}>
-                <Text style={[styles.connectionTypeText, { color: currentTheme === 'dark' ? '#5FD584' : '#2a8c42' }]}>
-                  REMOTE
-                </Text>
-              </View>
-            </View>
-            <View style={styles.modelMetaInfo}>
-              <View style={[
-                styles.modelTypeBadge,
-                { 
-                  backgroundColor: (isSelected || hasApiKey) ? 
-                    currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(74, 6, 96, 0.1)' : 
-                    'rgba(150, 150, 150, 0.1)' 
-                }
-              ]}>
-                <Text style={[
-                  styles.modelTypeText, 
-                  { 
-                    color: (isSelected || hasApiKey) ? 
-                      currentTheme === 'dark' ? '#fff' : '#4a0660' : 
-                      currentTheme === 'dark' ? '#fff' : themeColors.secondaryText 
-                  }
-                ]}>
-                  {item.provider}
-                </Text>
-              </View>
-              {isRemoteModelsDisabled && (
-                <Text style={[styles.modelApiKeyMissing, { color: currentTheme === 'dark' ? '#FF9494' : '#d32f2f' }]}>
-                  Remote models disabled
-                </Text>
-              )}
-            </View>
-          </View>
-          {isSelected && (
-            <View style={styles.selectedIndicator}>
-              <MaterialCommunityIcons 
-                name="check-circle" 
-                size={24} 
-                color={currentTheme === 'dark' ? '#fff' : getThemeAwareColor('#4a0660', currentTheme)} 
-              />
-            </View>
-          )}
-        </TouchableOpacity>
-      );
-    };
-
     const toggleLocalModelsDropdown = () => {
       setIsLocalModelsExpanded(!isLocalModelsExpanded);
     };
 
-    const renderSectionHeader = ({ section }: { section: SectionData }) => {
-      if (section.title === 'Remote Models') {
-        const hasApiKeys = hasAnyApiKey();
-        return (
-          <TouchableOpacity 
-            onPress={toggleOnlineModelsDropdown}
-            style={[
-              styles.sectionHeader, 
-              { backgroundColor: themeColors.background },
-              styles.modelSectionHeader,
-              styles.onlineModelsHeader,
-              hasApiKeys && styles.onlineModelsHeaderWithKeys,
-              currentTheme === 'dark' && {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                borderColor: 'rgba(255, 255, 255, 0.2)'
-              }
-            ]}
-          >
-            <View style={styles.sectionHeaderContent}>
-              <Text style={[
-                styles.sectionHeaderText, 
-                { color: currentTheme === 'dark' ? '#fff' : themeColors.secondaryText },
-                currentTheme === 'dark' && { opacity: 0.9 }
-              ]}>
-                {section.title}
-              </Text>
-              <MaterialCommunityIcons 
-                name={isOnlineModelsExpanded ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color={hasApiKeys ? 
-                  currentTheme === 'dark' ? '#5FD584' : getThemeAwareColor('#2a8c42', currentTheme) : 
-                  currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} 
-              />
-            </View>
-          </TouchableOpacity>
-        );
-      }
-      
-      return (
-        <View
-          style={[
-            styles.sectionHeader,
-            { backgroundColor: themeColors.background },
-            styles.modelSectionHeader,
-            styles.sectionHeaderWithControls,
-            currentTheme === 'dark' && {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderColor: 'rgba(255, 255, 255, 0.2)'
-            }
-          ]}
-        >
-          <TouchableOpacity
-            onPress={toggleLocalModelsDropdown}
-            style={styles.sectionHeaderToggle}
-          >
-            <Text
-              style={[
-                styles.sectionHeaderText,
-                { color: currentTheme === 'dark' ? '#fff' : themeColors.secondaryText },
-                currentTheme === 'dark' && { opacity: 0.9 }
-              ]}
-            >
-              {section.title}
-            </Text>
-            <MaterialCommunityIcons
-              name={isLocalModelsExpanded ? "chevron-up" : "chevron-down"}
-              size={24}
-              color={currentTheme === 'dark' ? '#fff' : themeColors.secondaryText}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={refreshStoredModels}
-            style={[
-              styles.sectionRefreshButton,
-              { backgroundColor: themeColors.borderColor }
-            ]}
-            disabled={isRefreshingLocalModels}
-          >
-            {isRefreshingLocalModels ? (
-              <ActivityIndicator size="small" color={getThemeAwareColor('#4a0660', currentTheme)} />
-            ) : (
-              <MaterialCommunityIcons
-                name="refresh"
-                size={20}
-                color={currentTheme === 'dark' ? '#fff' : themeColors.secondaryText}
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-      );
-    };
-
-    const renderItem = ({ item, section }: { item: Model, section: SectionData }) => {
-      if (section.title === 'Remote Models' && !isOnlineModelsExpanded) {
-        return null;
-      }
-      if (section.title === 'Local Models' && !isLocalModelsExpanded) {
-        return null;
-      }
-      
-      if ('isAppleFoundation' in item) {
-        return renderAppleFoundationItem({ item });
-      }
-      if ('isOnline' in item) {
-        return renderOnlineModelItem({ item });
-      } else {
-        return renderLocalModelItem({ item: item as StoredModel });
-      }
+    const renderContext: RenderContext = {
+      themeColors,
+      currentTheme,
+      selectedModelPath,
+      isGenerating: isGenerating || false,
+      handleModelSelect,
+      expandedGroups,
+      toggleGroup,
+      onlineModelStatuses,
+      enableRemoteModels,
+      isLoggedIn,
+      isOnlineModelsExpanded,
+      toggleOnlineModelsDropdown,
+      hasAnyApiKey,
+      isLocalModelsExpanded,
+      toggleLocalModelsDropdown,
+      refreshStoredModels,
+      isRefreshingLocalModels,
+      engine
     };
 
     useEffect(() => {
@@ -958,7 +555,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       };
     }, []);
 
-    const badgeConfig = getConnectionBadgeConfig(selectedModelPath);
+    const badgeConfig = getConnectionBadgeConfig(selectedModelPath, currentTheme);
 
     return (
       <>
@@ -1113,9 +710,15 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
               <SectionList
                 sections={sections}
-                keyExtractor={(item) => 'path' in item ? item.path : item.id}
-                renderItem={({ item, section }) => renderItem({ item, section })}
-                renderSectionHeader={renderSectionHeader}
+                keyExtractor={(item) => (
+                  'isMLXGroup' in item && (item as MLXGroup).isMLXGroup
+                    ? (item as MLXGroup).groupKey
+                    : 'path' in item
+                      ? item.path
+                      : item.id
+                )}
+                renderItem={({ item, section }) => renderItem(item, section, renderContext)}
+                renderSectionHeader={({ section }) => renderSectionHeader(section, renderContext)}
                 contentContainerStyle={styles.modelList}
                 stickySectionHeadersEnabled={true}
                 ListHeaderComponent={
@@ -1132,6 +735,20 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                         <MaterialCommunityIcons name="cube-outline" size={48} color={currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} />
                         <Text style={[styles.emptyText, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>
                           No local models found. Download from Models tab.
+                        </Text>
+                      </View>
+                    ) : sections[0]?.data?.length === 0 ? (
+                      <View style={styles.emptyContainer}>
+                        <MaterialCommunityIcons 
+                          name={engine === 'mlx' ? "atom" : "memory"} 
+                          size={48} 
+                          color={currentTheme === 'dark' ? '#fff' : themeColors.secondaryText} 
+                        />
+                        <Text style={[styles.emptyText, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>
+                          No {engine === 'mlx' ? 'MLX (safetensors)' : 'GGUF'} models found.{'\n'}
+                          {engine === 'mlx' 
+                            ? 'Download MLX models from Hugging Face or switch to llama.cpp engine.' 
+                            : 'Download GGUF models from Models tab or switch to MLX engine.'}
                         </Text>
                       </View>
                     ) : null}
@@ -1229,277 +846,3 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 );
 
 export default ModelSelector;
-
-const styles = StyleSheet.create({
-  selector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    
-  },
-  selectorContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  modelIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(74, 6, 96, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectorLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  selectorTextContainer: {
-    flex: 1,
-  },
-  selectorText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  selectorActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  unloadButton: {
-    padding: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  modelList: {
-    paddingBottom: 20,
-    paddingHorizontal: 4,
-  },
-  modelItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    marginHorizontal: 4,
-  },
-  selectedModelItem: {
-    backgroundColor: 'rgba(74, 6, 96, 0.1)',
-  },
-  modelIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(74, 6, 96, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  modelInfo: {
-    flex: 1,
-  },
-  modelName: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  selectedModelText: {
-    color: '#4a0660',
-    fontWeight: '600',
-  },
-  modelMetaInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modelDetails: {
-    fontSize: 14,
-  },
-  modelTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    backgroundColor: 'rgba(74, 6, 96, 0.1)',
-  },
-  modelTypeText: {
-    fontSize: 12,
-    color: '#4a0660',
-    fontWeight: '500',
-  },
-  selectedIndicator: {
-    marginLeft: 12,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 16,
-    marginTop: 24,
-    marginBottom: 16,
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(150, 150, 150, 0.1)',
-    borderRadius: 8,
-    backgroundColor: 'rgba(150, 150, 150, 0.05)',
-  },
-  emptyText: {
-    textAlign: 'center',
-    fontSize: 16,
-    lineHeight: 24,
-    maxWidth: 300,
-    fontWeight: '500',
-  },
-  selectorDisabled: {
-    opacity: 0.6,
-  },
-  modelItemDisabled: {
-    opacity: 0.6,
-  },
-  unloadButtonActive: {
-    backgroundColor: 'rgba(211, 47, 47, 0.1)',
-    borderRadius: 12,
-    padding: 4,
-  },
-  sectionHeader: {
-    padding: 12,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  sectionHeaderContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
-  sectionHeaderWithControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionHeaderToggle: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sectionRefreshButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  sectionHeaderText: {
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  modelSectionHeader: {
-    backgroundColor: 'rgba(74, 6, 96, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(74, 6, 96, 0.1)',
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  onlineModelsHeader: {
-    marginTop: 16,
-  },
-  modelApiKeyMissing: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginLeft: 8,
-  },
-  modelNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  connectionTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    backgroundColor: 'rgba(74, 6, 96, 0.1)',
-  },
-  connectionTypeText: {
-    fontSize: 10,
-    color: '#4a0660',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  modelNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  onlineModelsHeaderWithKeys: {
-    borderColor: 'rgba(74, 180, 96, 0.3)',
-    backgroundColor: 'rgba(74, 180, 96, 0.05)',
-  },
-  projectorModelItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginVertical: 4,
-    borderRadius: 8,
-  },
-  projectorModelInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  projectorModelName: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  projectorModelSize: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  projectorLabel: {
-    fontSize: 10,
-    marginTop: 8,
-    marginBottom: 2,
-    textTransform: 'uppercase',
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  projectorNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  projectorText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  projectorUnloadButton: {
-    backgroundColor: 'rgba(95, 213, 132, 0.1)',
-    borderRadius: 12,
-  },
-}); 
