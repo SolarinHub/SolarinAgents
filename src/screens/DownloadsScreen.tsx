@@ -352,7 +352,7 @@ export default function DownloadsScreen() {
         <FlatList
           data={downloads}
           renderItem={renderItem}
-          keyExtractor={item => `download-${item.id || item.name}`}
+          keyExtractor={item => `download-${item.name}`}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
