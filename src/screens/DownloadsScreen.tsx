@@ -348,6 +348,34 @@ export default function DownloadsScreen() {
     const hasMLXFiles = downloadData?.mlxFiles && downloadData.mlxFiles.length > 0;
     const isExpanded = expandedDownloads.has(item.name);
     
+    const calculateFileProgress = (fileIndex: number) => {
+      if (!hasMLXFiles || !downloadData.mlxFiles) return 0;
+      
+      const totalSize = downloadData.mlxFiles.reduce((sum, f) => sum + f.size, 0);
+      const bytesDownloaded = (item.progress / 100) * totalSize;
+      
+      let cumulativeSize = 0;
+      for (let i = 0; i < downloadData.mlxFiles.length; i++) {
+        const file = downloadData.mlxFiles[i];
+        if (i < fileIndex) {
+          cumulativeSize += file.size;
+        } else if (i === fileIndex) {
+          const fileStartByte = cumulativeSize;
+          const fileEndByte = cumulativeSize + file.size;
+          
+          if (bytesDownloaded <= fileStartByte) {
+            return 0;
+          } else if (bytesDownloaded >= fileEndByte) {
+            return 100;
+          } else {
+            const fileProgress = ((bytesDownloaded - fileStartByte) / file.size) * 100;
+            return Math.min(100, Math.max(0, fileProgress));
+          }
+        }
+      }
+      return 0;
+    };
+    
     return (
       <View style={[styles.downloadItem, { backgroundColor: themeColors.borderColor }]}>
         <View style={styles.downloadHeader}>
@@ -394,24 +422,49 @@ export default function DownloadsScreen() {
             <Text style={[styles.filesHeader, { color: themeColors.secondaryText }]}>
               {downloadData.mlxFiles.length} files
             </Text>
-            {downloadData.mlxFiles.map((file, index) => (
-              <View key={`${item.name}-${index}`} style={styles.fileRow}>
-                <View style={styles.fileRowContent}>
-                  <MaterialCommunityIcons
-                    name="file-document-outline"
-                    size={16}
-                    color={themeColors.secondaryText}
-                    style={styles.fileIcon}
-                  />
-                  <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
-                    {file.filename}
-                  </Text>
+            {downloadData.mlxFiles.map((file, index) => {
+              const fileProgress = calculateFileProgress(index);
+              const isFileComplete = fileProgress >= 100;
+              const isFileInProgress = fileProgress > 0 && fileProgress < 100;
+              
+              return (
+                <View key={`${item.name}-${index}`} style={styles.fileRow}>
+                  <View style={styles.fileRowContent}>
+                    <MaterialCommunityIcons
+                      name={isFileComplete ? "check-circle" : isFileInProgress ? "download" : "file-document-outline"}
+                      size={16}
+                      color={isFileComplete ? getThemeAwareColor('#4CAF50', currentTheme) : themeColors.secondaryText}
+                      style={styles.fileIcon}
+                    />
+                    <View style={styles.fileNameContainer}>
+                      <Text style={[styles.fileName, { color: themeColors.text }]} numberOfLines={1}>
+                        {file.filename}
+                      </Text>
+                      {isFileInProgress && (
+                        <View style={[styles.fileProgressBar, { backgroundColor: themeColors.background }]}>
+                          <View 
+                            style={[
+                              styles.fileProgressFill, 
+                              { width: `${fileProgress}%`, backgroundColor: getThemeAwareColor('#4a0660', currentTheme) }
+                            ]} 
+                          />
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <View style={styles.fileMetadata}>
+                    {isFileInProgress && (
+                      <Text style={[styles.fileProgress, { color: themeColors.secondaryText }]}>
+                        {Math.floor(fileProgress)}%
+                      </Text>
+                    )}
+                    <Text style={[styles.fileSize, { color: themeColors.secondaryText }]}>
+                      {formatBytes(file.size)}
+                    </Text>
+                  </View>
                 </View>
-                <Text style={[styles.fileSize, { color: themeColors.secondaryText }]}>
-                  {formatBytes(file.size)}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
@@ -543,11 +596,31 @@ const styles = StyleSheet.create({
   fileIcon: {
     marginRight: 8,
   },
+  fileNameContainer: {
+    flex: 1,
+  },
   fileName: {
     fontSize: 13,
-    flex: 1,
+    marginBottom: 4,
+  },
+  fileMetadata: {
+    alignItems: 'flex-end',
+  },
+  fileProgress: {
+    fontSize: 11,
+    marginBottom: 2,
   },
   fileSize: {
     fontSize: 12,
+  },
+  fileProgressBar: {
+    height: 3,
+    borderRadius: 1.5,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  fileProgressFill: {
+    height: '100%',
+    borderRadius: 1.5,
   },
 }); 
