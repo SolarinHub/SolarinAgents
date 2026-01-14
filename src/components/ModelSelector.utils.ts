@@ -75,15 +75,21 @@ export const getConnectionBadgeConfig = (provider: string | null, currentTheme: 
 export const isMLXModel = (model: StoredModel): boolean => {
   const path = model.path.toLowerCase();
   const name = model.name.toLowerCase();
-  return path.includes('/models/mlx/') || 
-         name.endsWith('.safetensors') ||
-         path.endsWith('.safetensors') ||
-         name.endsWith('.json') ||
-         path.endsWith('.json') ||
-         name.includes('mlx-community') ||
-         path.includes('mlx-community') ||
-         name.includes('mlx_') ||
-         path.includes('/mlx/');
+  
+  if (path.includes('/huggingface/models/') || path.includes('mlx-community')) {
+    return true;
+  }
+  
+  if (name.endsWith('.safetensors') || path.endsWith('.safetensors')) {
+    return true;
+  }
+  
+  if ((name.includes('mlx') || path.includes('mlx')) && 
+      (name.endsWith('.json') || path.endsWith('.json'))) {
+    return true;
+  }
+  
+  return false;
 };
 
 export const groupMLXModels = (items: StoredModel[]): (StoredModel | MLXGroup)[] => {
