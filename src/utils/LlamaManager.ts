@@ -40,6 +40,13 @@ class LlamaManager {
   private context: LlamaContext | null = null;
   private modelPath: string | null = null;
   private backendDevices: NativeBackendDeviceInfo[] = [];
+  private nextInitOverrides: Partial<{
+    n_ctx: number;
+    n_batch: number;
+    n_parallel: number;
+    n_threads: number;
+    n_gpu_layers: number;
+  }> | null = null;
   private events = new EventEmitter<LlamaManagerEvents>();
   private isCancelled: boolean = false;
   private isUnloading: boolean = false;
@@ -51,6 +58,20 @@ class LlamaManager {
   constructor() {
     this.settingsManager.loadSettings().catch(error => {
     });
+  }
+
+  setInitOverrides(overrides: Partial<{
+    n_ctx: number;
+    n_batch: number;
+    n_parallel: number;
+    n_threads: number;
+    n_gpu_layers: number;
+  }>) {
+    this.nextInitOverrides = { ...overrides };
+  }
+
+  clearInitOverrides() {
+    this.nextInitOverrides = null;
   }
 
   async initializeModel(modelPath: string, mmProjectorPath?: string) {
@@ -165,10 +186,19 @@ class LlamaManager {
         gpuLayerCount = 0;
       }
 
+      const initOverrides = this.nextInitOverrides;
+      this.nextInitOverrides = null;
+
       const initParams = {
         model: finalModelPath,
         ...LLAMA_INIT_CONFIG,
-        n_gpu_layers: gpuLayerCount,
+        ...(typeof initOverrides?.n_ctx === 'number' ? { n_ctx: Math.max(512, Math.round(initOverrides.n_ctx)) } : {}),
+        ...(typeof initOverrides?.n_batch === 'number' ? { n_batch: Math.max(16, Math.round(initOverrides.n_batch)) } : {}),
+        ...(typeof initOverrides?.n_parallel === 'number' ? { n_parallel: Math.max(1, Math.round(initOverrides.n_parallel)) } : {}),
+        ...(typeof initOverrides?.n_threads === 'number' ? { n_threads: Math.max(1, Math.round(initOverrides.n_threads)) } : {}),
+        n_gpu_layers: typeof initOverrides?.n_gpu_layers === 'number'
+          ? Math.max(0, Math.round(initOverrides.n_gpu_layers))
+          : gpuLayerCount,
       };
       console.log('init_model_params', JSON.stringify(initParams, null, 2));
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -17,12 +17,15 @@ import { useRemoteModel } from '../context/RemoteModelContext';
 import { getThemeAwareColor } from '../utils/ColorUtils';
 import { onlineModelService } from '../services/OnlineModelService';
 import { engineService } from '../services/inference-engine-service';
+import { llamaManager } from '../utils/LlamaManager';
 import { Dialog, Portal, Text, Button } from 'react-native-paper';
+import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { appleFoundationService } from '../services/AppleFoundationService';
 import type { ProviderType } from '../services/ModelManagementService';
+import { LLAMA_INIT_CONFIG } from '../config/llamaConfig';
 import { useStoredModels } from '../hooks/useStoredModels';
 import type { StoredModel, OnlineModel, AppleFoundationModel, MLXGroup, Model, ModelSelectorRef, ModelSelectorProps, SectionData } from './ModelSelector.types';
 import { ONLINE_MODELS } from './ModelSelector.constants';
@@ -62,6 +65,15 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
   const [appleFoundationEnabled, setAppleFoundationEnabled] = useState(false);
   const [appleFoundationAvailable, setAppleFoundationAvailable] = useState(false);
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+    const [initOverrides, setInitOverrides] = useState({
+      n_ctx: LLAMA_INIT_CONFIG.n_ctx,
+      n_batch: LLAMA_INIT_CONFIG.n_batch,
+      n_parallel: LLAMA_INIT_CONFIG.n_parallel,
+      n_threads: LLAMA_INIT_CONFIG.n_threads,
+      n_gpu_layers: 0,
+    });
+    const modelSelectInFlightRef = useRef(false);
+    const handledPreselectedPathRef = useRef<string | null>(null);
 
     const hideDialog = () => setDialogVisible(false);
 
@@ -187,87 +199,163 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       }
     };
 
-    const handleModelSelect = async (model: Model) => {
-      setModalVisible(false);
-      
-      if (isGenerating) {
+    const applyInitOverride = (key: 'n_ctx' | 'n_batch' | 'n_parallel' | 'n_threads' | 'n_gpu_layers', value: number) => {
+      setInitOverrides(prev => ({
+        ...prev,
+        [key]: Math.round(value),
+      }));
+    };
+
+    const executeLocalLoad = async (
+      modelPath: string,
+      projectorPath?: string,
+      mode: 'default' | 'text' | 'vision' = 'default',
+      visionModelName?: string,
+      projectorName?: string,
+    ) => {
+      if (onModelSelect) {
+        if (mode === 'vision' && visionModelName && projectorName) {
+          showDialog(
+            'Multimodal Model Ready',
+            `Loading ${visionModelName} with vision capabilities using ${projectorName}`,
+            [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          );
+        } else if (mode === 'text' && visionModelName) {
+          showDialog(
+            'Text-Only Model Ready',
+            `Loading ${visionModelName} in text-only mode (without vision capabilities)`,
+            [<Button key="ok" onPress={hideDialog}>OK</Button>]
+          );
+        }
+        onModelSelect('local', modelPath, projectorPath);
+        return;
+      }
+
+      const success = await loadModel(modelPath, projectorPath);
+      if (!success) {
+        return;
+      }
+
+      if (mode === 'vision') {
         showDialog(
-          'Model In Use',
-          'Cannot change model while generating a response. Please wait for the current generation to complete or cancel it.',
+          'Success',
+          'Vision model loaded successfully! You can now send images and photos.',
           [<Button key="ok" onPress={hideDialog}>OK</Button>]
         );
-        return;
+      } else if (mode === 'text') {
+        showDialog(
+          'Success',
+          'Model loaded successfully in text-only mode.',
+          [<Button key="ok" onPress={hideDialog}>OK</Button>]
+        );
       }
-      
-      if ('isAppleFoundation' in model) {
-        if (onModelSelect) {
-          onModelSelect('apple-foundation');
-        }
-        return;
-      }
-      if ('isOnline' in model) {
-        if (!enableRemoteModels || !isLoggedIn) {
-          setTimeout(() => {
-            showDialog(
-              'Remote Models Disabled',
-              'Remote models require the "Enable Remote Models" setting to be turned on and you need to be signed in. Would you like to go to Settings to configure this?',
-              [
-                <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
-                <Button 
-                  key="settings" 
-                  onPress={() => {
-                    hideDialog();
-                    if (onClose) onClose();
-                    navigation.navigate('MainTabs', { screen: 'SettingsTab' });
-                  }}
-                >
-                  Go to Settings
-                </Button>
-              ]
-            );
-          }, 300);
-          return;
-        }
-        
-        if (!onlineModelStatuses[model.id]) {
-          handleApiKeyRequired(model);
-          return;
-        }
-        
-        if (onModelSelect) {
-          onModelSelect(model.id as 'gemini' | 'chatgpt' | 'deepseek' | 'claude');
-        }
+    };
+
+    const startLocalLoad = async (
+      modelPath: string,
+      projectorPath?: string,
+      mode: 'default' | 'text' | 'vision' = 'default',
+      visionModelName?: string,
+      projectorName?: string,
+      modelFormat?: string,
+    ) => {
+      const engine = engineService.getEngineForModel(modelPath, modelFormat);
+      if (engine === 'llama') {
+        llamaManager.setInitOverrides(initOverrides);
       } else {
-        const storedModel = model as StoredModel;
-        const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
-        const pathLower = modelPath.toLowerCase();
-        const nameLower = (storedModel.name || '').toLowerCase();
+        llamaManager.clearInitOverrides();
+      }
+      await executeLocalLoad(modelPath, projectorPath, mode, visionModelName, projectorName);
+    };
 
-        const engine = engineService.getEngineForModel(modelPath, storedModel.modelFormat);
-        const enabled = engineService.getEnabled();
+    const handleModelSelect = async (model: Model) => {
+      if (modelSelectInFlightRef.current) {
+        return;
+      }
 
-        if (!enabled[engine]) {
+      modelSelectInFlightRef.current = true;
+      setModalVisible(false);
+      try {
+        if (isGenerating) {
           showDialog(
-            'Engine Disabled',
-            `${engine === 'llama' ? 'Llama.cpp' : 'MLX'} is disabled. Enable it in Settings to load this model.`,
+            'Model In Use',
+            'Cannot change model while generating a response. Please wait for the current generation to complete or cancel it.',
             [<Button key="ok" onPress={hideDialog}>OK</Button>]
           );
           return;
         }
 
-        const isVisionModel = nameLower.includes('llava') || 
-                             nameLower.includes('vision') ||
-                             nameLower.includes('minicpm');
-        
-        if (isVisionModel) {
-          showMultimodalDialog(storedModel);
-        } else {
+        if ('isAppleFoundation' in model) {
           if (onModelSelect) {
-            onModelSelect('local', modelPath);
+            onModelSelect('apple-foundation');
+          }
+          return;
+        }
+        if ('isOnline' in model) {
+          if (!enableRemoteModels || !isLoggedIn) {
+            setTimeout(() => {
+              showDialog(
+                'Remote Models Disabled',
+                'Remote models require the "Enable Remote Models" setting to be turned on and you need to be signed in. Would you like to go to Settings to configure this?',
+                [
+                  <Button key="cancel" onPress={hideDialog}>Cancel</Button>,
+                  <Button 
+                    key="settings" 
+                    onPress={() => {
+                      hideDialog();
+                      if (onClose) onClose();
+                      navigation.navigate('MainTabs', { screen: 'SettingsTab' });
+                    }}
+                  >
+                    Go to Settings
+                  </Button>
+                ]
+              );
+            }, 300);
+            return;
+          }
+
+          if (!onlineModelStatuses[model.id]) {
+            handleApiKeyRequired(model);
+            return;
+          }
+
+          if (onModelSelect) {
+            onModelSelect(model.id as 'gemini' | 'chatgpt' | 'deepseek' | 'claude');
+          }
+        } else {
+          const storedModel = model as StoredModel;
+          const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
+          const nameLower = (storedModel.name || '').toLowerCase();
+
+          if (selectedModelPath === modelPath && !isModelLoading) {
+            return;
+          }
+
+          const engine = engineService.getEngineForModel(modelPath, storedModel.modelFormat);
+          const enabled = engineService.getEnabled();
+
+          if (!enabled[engine]) {
+            showDialog(
+              'Engine Disabled',
+              `${engine === 'llama' ? 'Llama.cpp' : 'MLX'} is disabled. Enable it in Settings to load this model.`,
+              [<Button key="ok" onPress={hideDialog}>OK</Button>]
+            );
+            return;
+          }
+
+          const isVisionModel = nameLower.includes('llava') || 
+                              nameLower.includes('vision') ||
+                              nameLower.includes('minicpm');
+
+          if (isVisionModel) {
+            showMultimodalDialog(storedModel);
           } else {
-            await loadModel(modelPath);
+            await startLocalLoad(modelPath, undefined, 'default', undefined, undefined, storedModel.modelFormat);
           }
         }
+      } finally {
+        modelSelectInFlightRef.current = false;
       }
     };
 
@@ -282,11 +370,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
               hideDialog();
               const storedModel = model as StoredModel;
               const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
-              if (onModelSelect) {
-                onModelSelect('local', modelPath);
-              } else {
-                loadModel(modelPath);
-              }
+              void startLocalLoad(modelPath, undefined, 'text', model.name, undefined, storedModel.modelFormat);
             }}
           >
             Text Only
@@ -334,24 +418,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       const storedModel = selectedVisionModel as StoredModel;
       const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
       const projectorPath = projectorModel.path;
-
-      if (onModelSelect) {
-        showDialog(
-          'Multimodal Model Ready',
-          `Loading ${selectedVisionModel.name} with vision capabilities using ${projectorModel.name}`,
-          [<Button key="ok" onPress={hideDialog}>OK</Button>]
-        );
-        onModelSelect('local', modelPath, projectorPath);
-      } else {
-        const success = await loadModel(modelPath, projectorPath);
-        if (success) {
-          showDialog(
-            'Success',
-            'Vision model loaded successfully! You can now send images and photos.',
-            [<Button key="ok" onPress={hideDialog}>OK</Button>]
-          );
-        }
-      }
+      await startLocalLoad(modelPath, projectorPath, 'vision', selectedVisionModel.name, projectorModel.name, storedModel.modelFormat);
       setSelectedVisionModel(null);
     };
 
@@ -363,23 +430,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       const storedModel = selectedVisionModel as StoredModel;
       const modelPath = storedModel.isExternal && storedModel.originalPath ? storedModel.originalPath : storedModel.path;
 
-      if (onModelSelect) {
-        showDialog(
-          'Text-Only Model Ready',
-          `Loading ${selectedVisionModel.name} in text-only mode (without vision capabilities)`,
-          [<Button key="ok" onPress={hideDialog}>OK</Button>]
-        );
-        onModelSelect('local', modelPath);
-      } else {
-        const success = await loadModel(modelPath);
-        if (success) {
-          showDialog(
-            'Success',
-            'Model loaded successfully in text-only mode.',
-            [<Button key="ok" onPress={hideDialog}>OK</Button>]
-          );
-        }
-      }
+      await startLocalLoad(modelPath, undefined, 'text', selectedVisionModel.name, undefined, storedModel.modelFormat);
       setSelectedVisionModel(null);
     };
 
@@ -511,12 +562,22 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
     useEffect(() => {
       if (preselectedModelPath && models.length > 0) {
+        if (handledPreselectedPathRef.current === preselectedModelPath) {
+          return;
+        }
         const preselectedModel = models.find(model => model.path === preselectedModelPath);
         if (preselectedModel) {
+          handledPreselectedPathRef.current = preselectedModelPath;
           handleModelSelect(preselectedModel);
         }
       }
     }, [preselectedModelPath, models]);
+
+    useEffect(() => {
+      if (!preselectedModelPath) {
+        handledPreselectedPathRef.current = null;
+      }
+    }, [preselectedModelPath]);
 
 
     useEffect(() => {
@@ -703,6 +764,79 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                 stickySectionHeadersEnabled={true}
                 ListHeaderComponent={
                   <View>
+                    <View style={styles.initPanel}> 
+
+                      <View style={styles.initSliderItem}>
+                        <View style={styles.initSliderHeader}>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Context (n_ctx)</Text>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_ctx}</Text>
+                        </View>
+                        <Slider
+                          minimumValue={512}
+                          maximumValue={16384}
+                          step={256}
+                          value={initOverrides.n_ctx}
+                          onValueChange={(value) => applyInitOverride('n_ctx', value)}
+                        />
+                      </View>
+
+                      <View style={styles.initSliderItem}>
+                        <View style={styles.initSliderHeader}>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Batch (n_batch)</Text>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_batch}</Text>
+                        </View>
+                        <Slider
+                          minimumValue={16}
+                          maximumValue={2048}
+                          step={16}
+                          value={initOverrides.n_batch}
+                          onValueChange={(value) => applyInitOverride('n_batch', value)}
+                        />
+                      </View>
+
+                      <View style={styles.initSliderItem}>
+                        <View style={styles.initSliderHeader}>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Parallel (n_parallel)</Text>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_parallel}</Text>
+                        </View>
+                        <Slider
+                          minimumValue={1}
+                          maximumValue={8}
+                          step={1}
+                          value={initOverrides.n_parallel}
+                          onValueChange={(value) => applyInitOverride('n_parallel', value)}
+                        />
+                      </View>
+
+                      <View style={styles.initSliderItem}>
+                        <View style={styles.initSliderHeader}>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Threads (n_threads)</Text>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_threads}</Text>
+                        </View>
+                        <Slider
+                          minimumValue={1}
+                          maximumValue={16}
+                          step={1}
+                          value={initOverrides.n_threads}
+                          onValueChange={(value) => applyInitOverride('n_threads', value)}
+                        />
+                      </View>
+
+                      <View style={styles.initSliderItem}>
+                        <View style={styles.initSliderHeader}>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>GPU Layers (n_gpu_layers)</Text>
+                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_gpu_layers}</Text>
+                        </View>
+                        <Slider
+                          minimumValue={0}
+                          maximumValue={200}
+                          step={1}
+                          value={initOverrides.n_gpu_layers}
+                          onValueChange={(value) => applyInitOverride('n_gpu_layers', value)}
+                        />
+                      </View>
+                    </View>
+
                     {isLoadingLocalModels ? (
                       <View style={styles.emptyContainer}>
                         <ActivityIndicator size="large" color={getThemeAwareColor('#4a0660', currentTheme)} />

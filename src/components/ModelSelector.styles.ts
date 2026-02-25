@@ -258,6 +258,19 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  initPanel: {
+    marginHorizontal: 4,
+    marginBottom: 12,
+  },
+  initSliderItem: {
+    marginBottom: 12,
+  },
+  initSliderHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   projectorNameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
