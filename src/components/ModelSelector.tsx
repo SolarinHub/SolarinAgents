@@ -792,6 +792,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                               step={256}
                               value={initOverrides.n_ctx}
                               onValueChange={(value) => applyInitOverride('n_ctx', value)}
+                              minimumTrackTintColor={getThemeAwareColor('#4a0660', currentTheme)}
+                              thumbTintColor={getThemeAwareColor('#4a0660', currentTheme)}
                             />
                           </View>
 
@@ -806,6 +808,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                               step={16}
                               value={initOverrides.n_batch}
                               onValueChange={(value) => applyInitOverride('n_batch', value)}
+                              minimumTrackTintColor={getThemeAwareColor('#4a0660', currentTheme)}
+                              thumbTintColor={getThemeAwareColor('#4a0660', currentTheme)}
                             />
                           </View>
 
@@ -820,6 +824,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                               step={1}
                               value={initOverrides.n_parallel}
                               onValueChange={(value) => applyInitOverride('n_parallel', value)}
+                              minimumTrackTintColor={getThemeAwareColor('#4a0660', currentTheme)}
+                              thumbTintColor={getThemeAwareColor('#4a0660', currentTheme)}
                             />
                           </View>
 
@@ -834,6 +840,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                               step={1}
                               value={initOverrides.n_threads}
                               onValueChange={(value) => applyInitOverride('n_threads', value)}
+                              minimumTrackTintColor={getThemeAwareColor('#4a0660', currentTheme)}
+                              thumbTintColor={getThemeAwareColor('#4a0660', currentTheme)}
                             />
                           </View>
 
@@ -848,6 +856,8 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                               step={1}
                               value={initOverrides.n_gpu_layers}
                               onValueChange={(value) => applyInitOverride('n_gpu_layers', value)}
+                              minimumTrackTintColor={getThemeAwareColor('#4a0660', currentTheme)}
+                              thumbTintColor={getThemeAwareColor('#4a0660', currentTheme)}
                             />
                           </View>
                         </>

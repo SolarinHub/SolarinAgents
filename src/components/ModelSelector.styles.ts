@@ -271,6 +271,7 @@ export const styles = StyleSheet.create({
   initPanelToggleLabel: {
     fontSize: 13,
     fontWeight: '600',
+    paddingHorizontal: 3,
   },
   initSliderItem: {
     marginBottom: 12,
