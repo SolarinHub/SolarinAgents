@@ -45,6 +45,25 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
   const themeColors = theme[currentTheme as 'light' | 'dark'];
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
+  const isMLXModel = (model: StoredModel): boolean => {
+    if (model.modelFormat === 'mlx') return true;
+    if (model.modelFormat === 'gguf') return false;
+
+    const path = model.path.toLowerCase();
+    const name = model.name.toLowerCase();
+
+    if (model.isDirectory) return true;
+    if (path.includes('/huggingface/models/') || path.includes('mlx-community')) return true;
+    if (name.endsWith('.safetensors') || path.endsWith('.safetensors')) return true;
+
+    if ((name.includes('mlx') || path.includes('mlx')) &&
+        (name.endsWith('.json') || path.endsWith('.json'))) {
+      return true;
+    }
+
+    return false;
+  };
+
   const toggleGroup = (groupName: string) => {
     setExpandedGroups(prev => {
       const newSet = new Set(prev);
@@ -101,7 +120,9 @@ export const StoredModelsTab: React.FC<StoredModelsTabProps> = ({
     return [...grouped, ...others];
   };
 
-  const displayModels = groupMLXModels(storedModels);
+  const mlxModels = storedModels.filter(isMLXModel);
+  const nonMlxModels = storedModels.filter(model => !isMLXModel(model));
+  const displayModels = [...nonMlxModels, ...groupMLXModels(mlxModels)];
 
   const StoredModelsHeader = () => (
     <View style={styles.storedModelsHeader}>
