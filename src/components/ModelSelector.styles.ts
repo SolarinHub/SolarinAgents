@@ -260,7 +260,17 @@ export const styles = StyleSheet.create({
   },
   initPanel: {
     marginHorizontal: 4,
-    marginBottom: 12,
+    marginBottom: 4,
+  },
+  initPanelToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+  },
+  initPanelToggleLabel: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   initSliderItem: {
     marginBottom: 12,

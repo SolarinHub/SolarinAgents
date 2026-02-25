@@ -72,6 +72,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       n_threads: LLAMA_INIT_CONFIG.n_threads,
       n_gpu_layers: 0,
     });
+    const [showInitPanel, setShowInitPanel] = useState(false);
     const modelSelectInFlightRef = useRef(false);
     const handledPreselectedPathRef = useRef<string | null>(null);
 
@@ -764,77 +765,93 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                 stickySectionHeadersEnabled={true}
                 ListHeaderComponent={
                   <View>
-                    <View style={styles.initPanel}> 
-
-                      <View style={styles.initSliderItem}>
-                        <View style={styles.initSliderHeader}>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Context (n_ctx)</Text>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_ctx}</Text>
-                        </View>
-                        <Slider
-                          minimumValue={512}
-                          maximumValue={16384}
-                          step={256}
-                          value={initOverrides.n_ctx}
-                          onValueChange={(value) => applyInitOverride('n_ctx', value)}
+                    <View style={styles.initPanel}>
+                      <TouchableOpacity
+                        style={styles.initPanelToggle}
+                        onPress={() => setShowInitPanel(v => !v)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.initPanelToggleLabel, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>Advanced Settings</Text>
+                        <MaterialCommunityIcons
+                          name={showInitPanel ? 'chevron-up' : 'chevron-down'}
+                          size={20}
+                          color={currentTheme === 'dark' ? '#fff' : themeColors.text}
                         />
-                      </View>
+                      </TouchableOpacity>
 
-                      <View style={styles.initSliderItem}>
-                        <View style={styles.initSliderHeader}>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Batch (n_batch)</Text>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_batch}</Text>
-                        </View>
-                        <Slider
-                          minimumValue={16}
-                          maximumValue={2048}
-                          step={16}
-                          value={initOverrides.n_batch}
-                          onValueChange={(value) => applyInitOverride('n_batch', value)}
-                        />
-                      </View>
+                      {showInitPanel && (
+                        <>
+                          <View style={styles.initSliderItem}>
+                            <View style={styles.initSliderHeader}>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Context (n_ctx)</Text>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_ctx}</Text>
+                            </View>
+                            <Slider
+                              minimumValue={512}
+                              maximumValue={16384}
+                              step={256}
+                              value={initOverrides.n_ctx}
+                              onValueChange={(value) => applyInitOverride('n_ctx', value)}
+                            />
+                          </View>
 
-                      <View style={styles.initSliderItem}>
-                        <View style={styles.initSliderHeader}>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Parallel (n_parallel)</Text>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_parallel}</Text>
-                        </View>
-                        <Slider
-                          minimumValue={1}
-                          maximumValue={8}
-                          step={1}
-                          value={initOverrides.n_parallel}
-                          onValueChange={(value) => applyInitOverride('n_parallel', value)}
-                        />
-                      </View>
+                          <View style={styles.initSliderItem}>
+                            <View style={styles.initSliderHeader}>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Batch (n_batch)</Text>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_batch}</Text>
+                            </View>
+                            <Slider
+                              minimumValue={16}
+                              maximumValue={2048}
+                              step={16}
+                              value={initOverrides.n_batch}
+                              onValueChange={(value) => applyInitOverride('n_batch', value)}
+                            />
+                          </View>
 
-                      <View style={styles.initSliderItem}>
-                        <View style={styles.initSliderHeader}>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Threads (n_threads)</Text>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_threads}</Text>
-                        </View>
-                        <Slider
-                          minimumValue={1}
-                          maximumValue={16}
-                          step={1}
-                          value={initOverrides.n_threads}
-                          onValueChange={(value) => applyInitOverride('n_threads', value)}
-                        />
-                      </View>
+                          <View style={styles.initSliderItem}>
+                            <View style={styles.initSliderHeader}>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Parallel (n_parallel)</Text>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_parallel}</Text>
+                            </View>
+                            <Slider
+                              minimumValue={1}
+                              maximumValue={8}
+                              step={1}
+                              value={initOverrides.n_parallel}
+                              onValueChange={(value) => applyInitOverride('n_parallel', value)}
+                            />
+                          </View>
 
-                      <View style={styles.initSliderItem}>
-                        <View style={styles.initSliderHeader}>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>GPU Layers (n_gpu_layers)</Text>
-                          <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_gpu_layers}</Text>
-                        </View>
-                        <Slider
-                          minimumValue={0}
-                          maximumValue={200}
-                          step={1}
-                          value={initOverrides.n_gpu_layers}
-                          onValueChange={(value) => applyInitOverride('n_gpu_layers', value)}
-                        />
-                      </View>
+                          <View style={styles.initSliderItem}>
+                            <View style={styles.initSliderHeader}>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>Threads (n_threads)</Text>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_threads}</Text>
+                            </View>
+                            <Slider
+                              minimumValue={1}
+                              maximumValue={16}
+                              step={1}
+                              value={initOverrides.n_threads}
+                              onValueChange={(value) => applyInitOverride('n_threads', value)}
+                            />
+                          </View>
+
+                          <View style={styles.initSliderItem}>
+                            <View style={styles.initSliderHeader}>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>GPU Layers (n_gpu_layers)</Text>
+                              <Text style={{ color: currentTheme === 'dark' ? '#fff' : themeColors.text }}>{initOverrides.n_gpu_layers}</Text>
+                            </View>
+                            <Slider
+                              minimumValue={0}
+                              maximumValue={200}
+                              step={1}
+                              value={initOverrides.n_gpu_layers}
+                              onValueChange={(value) => applyInitOverride('n_gpu_layers', value)}
+                            />
+                          </View>
+                        </>
+                      )}
                     </View>
 
                     {isLoadingLocalModels ? (
