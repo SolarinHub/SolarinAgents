@@ -273,6 +273,17 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 3,
   },
+  initPanelActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  initResetIconButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   initSliderItem: {
     marginBottom: 12,
   },

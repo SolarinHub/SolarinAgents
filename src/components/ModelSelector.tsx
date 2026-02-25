@@ -207,6 +207,16 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       }));
     };
 
+    const resetInitOverrides = () => {
+      setInitOverrides({
+        n_ctx: LLAMA_INIT_CONFIG.n_ctx,
+        n_batch: LLAMA_INIT_CONFIG.n_batch,
+        n_parallel: LLAMA_INIT_CONFIG.n_parallel,
+        n_threads: LLAMA_INIT_CONFIG.n_threads,
+        n_gpu_layers: 0,
+      });
+    };
+
     const executeLocalLoad = async (
       modelPath: string,
       projectorPath?: string,
@@ -772,11 +782,29 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.initPanelToggleLabel, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>Local Model Settings</Text>
-                        <MaterialCommunityIcons
-                          name={showInitPanel ? 'chevron-up' : 'chevron-down'}
-                          size={20}
-                          color={currentTheme === 'dark' ? '#fff' : themeColors.text}
-                        />
+                        <View style={styles.initPanelActions}>
+                          {showInitPanel && (
+                            <TouchableOpacity
+                              style={styles.initResetIconButton}
+                              onPress={(event) => {
+                                event.stopPropagation();
+                                resetInitOverrides();
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <MaterialCommunityIcons
+                                name="restore"
+                                size={16}
+                                color={getThemeAwareColor('#4a0660', currentTheme)}
+                              />
+                            </TouchableOpacity>
+                          )}
+                          <MaterialCommunityIcons
+                            name={showInitPanel ? 'chevron-up' : 'chevron-down'}
+                            size={20}
+                            color={currentTheme === 'dark' ? '#fff' : themeColors.text}
+                          />
+                        </View>
                       </TouchableOpacity>
 
                       {showInitPanel && (
