@@ -15,9 +15,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-import CodeHighlighter from 'react-native-code-highlighter';
-import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import ChatMarkdown from './ChatMarkdown';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import chatManager from '../../utils/ChatManager';
@@ -519,179 +517,13 @@ export default function ChatView({
             )
           ) : (
             <View style={styles.markdownWrapper}>
-              <Markdown
-                style={{
-                  body: {
-                    color: item.role === 'user' ? '#fff' : themeColors.text,
-                    fontSize: 15,
-                    lineHeight: 20,
-                  },
-                  paragraph: {
-                    marginVertical: 0,
-                  },
-                  heading1: {
-                    fontSize: 18,
-                    lineHeight: 24,
-                    fontWeight: '600',
-                    marginVertical: 8,
-                  },
-                  heading2: {
-                    fontSize: 17,
-                    lineHeight: 22,
-                    fontWeight: '600',
-                    marginVertical: 8,
-                  },
-                  heading3: {
-                    fontSize: 16,
-                    lineHeight: 20,
-                    fontWeight: '600',
-                    marginVertical: 8,
-                  },
-                  heading4: {
-                    fontSize: 15,
-                    lineHeight: 20,
-                    fontWeight: '600',
-                    marginVertical: 8,
-                  },
-                  heading5: {
-                    fontSize: 15,
-                    lineHeight: 20,
-                    fontWeight: '600',
-                    marginVertical: 8,
-                  },
-                  heading6: {
-                    fontSize: 15,
-                    lineHeight: 20,
-                    fontWeight: '600',
-                    marginVertical: 8,
-                  },
-                  code_block: {
-                    backgroundColor: '#000',
-                    borderRadius: 8,
-                    padding: 12,
-                    marginVertical: 8,
-                    position: 'relative',
-                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                    fontSize: 14,
-                    lineHeight: 20,
-                  },
-                  fence: {
-                    backgroundColor: '#000',
-                    borderRadius: 8,
-                    padding: 12,
-                    marginVertical: 8,
-                    position: 'relative',
-                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                    fontSize: 14,
-                    lineHeight: 20,
-                  },
-                  code_inline: {
-                    color: '#fff',
-                    backgroundColor: '#000',
-                    borderRadius: 4,
-                    paddingHorizontal: 4,
-                    paddingVertical: 2,
-                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                    fontSize: 14,
-                  },
-                  text: {
-                    color: item.role === 'user' ? '#fff' : themeColors.text,
-                    fontSize: 15,
-                    lineHeight: 20,
-                  },
-                  fence_text: {
-                    color: '#fff',
-                    fontSize: 14,
-                    lineHeight: 20,
-                  },
-                  code_block_text: {
-                    color: '#fff',
-                    fontSize: 14,
-                    lineHeight: 20,
-                  },
-                  list_item: {
-                    marginVertical: 4,
-                  },
-                  bullet_list: {
-                    marginVertical: 8,
-                  },
-                  ordered_list: {
-                    marginVertical: 8,
-                  }
-                }}
-                rules={{
-                  fence: (node, _children, _parent, styles) => {
-                    const codeContent = node.content;
-                    const language = (node as any).sourceInfo || 'text';
-                    return (
-                      <View style={[styles.fence, { position: 'relative', backgroundColor: '#000000' }]} key={node.key}>
-                        <CodeHighlighter
-                          hljsStyle={atomOneDark}
-                          textStyle={{
-                            fontSize: 14,
-                            lineHeight: 20,
-                            fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                          }}
-                          scrollViewProps={{ 
-                            style: { backgroundColor: '#000000' },
-                            contentContainerStyle: { backgroundColor: '#000000' } 
-                          }}
-                          {...({ language } as any)}
-                        >
-                          {codeContent || ''}
-                        </CodeHighlighter>
-                        <TouchableOpacity 
-                          style={styles.codeBlockCopyButton}
-                          onPress={() => onCopyText(codeContent)}
-                          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                        >
-                          <MaterialCommunityIcons 
-                            name="content-copy" 
-                            size={14} 
-                            color={themeColors.headerText} 
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  },
-                  code_block: (node, _children, _parent, styles) => {
-                    const codeContent = node.content;
-                    const language = (node as any).sourceInfo || 'text';
-                    return (
-                      <View style={[styles.code_block, { position: 'relative', backgroundColor: '#000000' }]} key={node.key}>
-                        <CodeHighlighter
-                          hljsStyle={atomOneDark}
-                          textStyle={{
-                            fontSize: 14,
-                            lineHeight: 20,
-                            fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                          }}
-                          scrollViewProps={{ 
-                            style: { backgroundColor: '#000000' },
-                            contentContainerStyle: { backgroundColor: '#000000' } 
-                          }}
-                          {...({ language } as any)}
-                        >
-                          {codeContent || ''}
-                        </CodeHighlighter>
-                        <TouchableOpacity 
-                          style={styles.codeBlockCopyButton}
-                          onPress={() => onCopyText(codeContent)}
-                          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                        >
-                          <MaterialCommunityIcons 
-                            name="content-copy" 
-                            size={14} 
-                            color={themeColors.headerText} 
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  }
-                }}
-              >
-                {messageContent && messageContent.trim() ? messageContent : ''}
-              </Markdown>
+              <ChatMarkdown
+                content={messageContent}
+                isStreaming={isCurrentlyStreaming}
+                textColor={item.role === 'user' ? '#fff' : themeColors.text}
+                codeHeaderColor={themeColors.headerText}
+                onCopyCode={onCopyText}
+              />
             </View>
           )}
 
@@ -1076,15 +908,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontStyle: 'italic',
     opacity: 0.9,
-  },
-  codeBlockCopyButton: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    padding: 6,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    zIndex: 1,
   },
   loadingContainer: {
     padding: 12,
