@@ -73,7 +73,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       n_batch: LLAMA_INIT_CONFIG.n_batch,
       n_parallel: LLAMA_INIT_CONFIG.n_parallel,
       n_threads: LLAMA_INIT_CONFIG.n_threads,
-      n_gpu_layers: 0,
+      n_gpu_layers: LLAMA_INIT_CONFIG.n_gpu_layers,
     });
     const [showInitPanel, setShowInitPanel] = useState(false);
     const getScreenH = () => Dimensions.get('window').height;
@@ -220,7 +220,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         n_batch: LLAMA_INIT_CONFIG.n_batch,
         n_parallel: LLAMA_INIT_CONFIG.n_parallel,
         n_threads: LLAMA_INIT_CONFIG.n_threads,
-        n_gpu_layers: 0,
+        n_gpu_layers: LLAMA_INIT_CONFIG.n_gpu_layers,
       });
     };
 

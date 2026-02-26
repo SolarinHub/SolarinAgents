@@ -55,6 +55,100 @@ class LlamaManager {
   private tokenProcessingService = new TokenProcessingService();
   private settingsManager = new LlamaSettingsManager();
 
+  private resolveUseMmapValue(value: unknown): boolean {
+    if (value === 'false' || value === false) {
+      return false;
+    }
+    if (value === 'true' || value === true) {
+      return true;
+    }
+    if (value === 'smart' || value === undefined || value === null) {
+      return true;
+    }
+    return Boolean(value);
+  }
+
+  private toCompatInitParams(params: Record<string, any>) {
+    return {
+      model: params.model,
+      n_ctx: params.n_ctx,
+      n_batch: params.n_batch,
+      n_parallel: params.n_parallel,
+      n_threads: params.n_threads,
+      n_gpu_layers: params.n_gpu_layers,
+      use_mlock: typeof params.use_mlock === 'boolean' ? params.use_mlock : false,
+      use_mmap: this.resolveUseMmapValue(params.use_mmap),
+      embedding: params.embedding,
+      ctx_shift: params.ctx_shift,
+    };
+  }
+
+  private bytesToMB(bytes: number): number {
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+      return 0;
+    }
+    return Math.round((bytes / (1024 * 1024)) * 100) / 100;
+  }
+
+  private serializeError(error: unknown) {
+    if (error instanceof Error) {
+      return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      };
+    }
+
+    if (typeof error === 'object' && error !== null) {
+      try {
+        return JSON.parse(JSON.stringify(error));
+      } catch {
+        return { value: String(error) };
+      }
+    }
+
+    return { value: String(error) };
+  }
+
+  private async logInitMemory(stage: string, modelSize: number) {
+    try {
+      const memory = await this.checkMemoryRequirements();
+      const availableMemory = Number(memory?.availableMemory ?? 0);
+      const requiredMemory = Number(memory?.requiredMemory ?? 0);
+      const modelMB = this.bytesToMB(modelSize);
+      const availableMB = this.bytesToMB(availableMemory);
+      const requiredMB = this.bytesToMB(requiredMemory);
+      const modelToAvailableRatio = availableMemory > 0 ? Number((modelSize / availableMemory).toFixed(4)) : null;
+      const requiredToAvailableRatio = availableMemory > 0 ? Number((requiredMemory / availableMemory).toFixed(4)) : null;
+
+      console.log('init_model_memory', {
+        stage,
+        modelBytes: modelSize,
+        modelMB,
+        availableBytes: availableMemory,
+        availableMB,
+        requiredBytes: requiredMemory,
+        requiredMB,
+        modelToAvailableRatio,
+        requiredToAvailableRatio,
+      });
+    } catch (error) {
+      console.log('init_model_memory_failed', {
+        stage,
+        error: this.serializeError(error),
+      });
+    }
+  }
+
+  private async logInitFailure(stage: string, error: unknown, modelSize: number, initParams: Record<string, any>) {
+    console.log('init_model_failure', {
+      stage,
+      error: this.serializeError(error),
+      initParams,
+    });
+    await this.logInitMemory(stage, modelSize);
+  }
+
   constructor() {
     this.settingsManager.loadSettings().catch(error => {
     });
@@ -107,6 +201,7 @@ class LlamaManager {
       const modelInfo = await FileSystem.getInfoAsync(fsPath, { size: true });
       const modelSize = (modelInfo as any).size || 0;
       console.log('init_model_file_info', { exists: modelInfo.exists, size: modelSize });
+      console.log('init_model_size_mb', this.bytesToMB(modelSize));
       
       if (!modelInfo.exists) {
         throw new Error('model_file_missing');
@@ -114,6 +209,15 @@ class LlamaManager {
       if (modelSize <= 0) {
         throw new Error('model_file_empty');
       }
+
+      try {
+        const nativeModelInfo = await loadLlamaModelInfo(finalModelPath);
+        console.log('init_model_native_info', nativeModelInfo);
+      } catch (error) {
+        console.log('init_model_native_info_failed', this.serializeError(error));
+      }
+
+      await this.logInitMemory('pre_init', modelSize);
 
       const backendDevices = await getBackendDevicesInfo().catch((err) => {
         console.log('init_model_backend_query_failed', err);
@@ -189,37 +293,59 @@ class LlamaManager {
       const initOverrides = this.nextInitOverrides;
       this.nextInitOverrides = null;
 
+      const effectiveGpuLayers = !hasGpuDevice
+        ? 0
+        : typeof initOverrides?.n_gpu_layers === 'number'
+          ? Math.max(0, Math.round(initOverrides.n_gpu_layers))
+          : gpuLayerCount;
+
       const initParams = {
         model: finalModelPath,
         ...LLAMA_INIT_CONFIG,
+        use_mmap: this.resolveUseMmapValue(LLAMA_INIT_CONFIG.use_mmap),
+        flash_attn_type: LLAMA_INIT_CONFIG.flash_attn_type as 'auto' | 'off' | 'on',
+        cache_type_k: LLAMA_INIT_CONFIG.cache_type_k as 'f16' | 'f32' | 'q8_0' | 'q4_0' | 'q4_1' | 'iq4_nl' | 'q5_0' | 'q5_1',
+        cache_type_v: LLAMA_INIT_CONFIG.cache_type_v as 'f16' | 'f32' | 'q8_0' | 'q4_0' | 'q4_1' | 'iq4_nl' | 'q5_0' | 'q5_1',
         ...(typeof initOverrides?.n_ctx === 'number' ? { n_ctx: Math.max(512, Math.round(initOverrides.n_ctx)) } : {}),
         ...(typeof initOverrides?.n_batch === 'number' ? { n_batch: Math.max(16, Math.round(initOverrides.n_batch)) } : {}),
         ...(typeof initOverrides?.n_parallel === 'number' ? { n_parallel: Math.max(1, Math.round(initOverrides.n_parallel)) } : {}),
         ...(typeof initOverrides?.n_threads === 'number' ? { n_threads: Math.max(1, Math.round(initOverrides.n_threads)) } : {}),
-        n_gpu_layers: typeof initOverrides?.n_gpu_layers === 'number'
-          ? Math.max(0, Math.round(initOverrides.n_gpu_layers))
-          : gpuLayerCount,
+        n_gpu_layers: effectiveGpuLayers,
       };
       console.log('init_model_params', JSON.stringify(initParams, null, 2));
+
+      const compatParams = this.toCompatInitParams(initParams);
 
       try {
         console.log('init_model_calling_native');
         this.context = await initLlama(initParams);
         console.log('init_model_native_success');
+        await this.logInitMemory('native_success', modelSize);
       } catch (error) {
         console.log('init_model_native_failed', error);
-        if (Platform.OS === 'android') {
-          const retryParams = {
-            ...initParams,
-            n_gpu_layers: 0,
-            use_mlock: false,
-            use_mmap: false,
-          };
-          console.log('init_model_android_fallback', JSON.stringify(retryParams, null, 2));
-          this.context = await initLlama(retryParams);
-          console.log('init_model_fallback_success');
-        } else {
-          throw error;
+        await this.logInitFailure('native_failed', error, modelSize, initParams);
+        try {
+          console.log('init_model_compat_fallback', JSON.stringify(compatParams, null, 2));
+          this.context = await initLlama(compatParams);
+          console.log('init_model_compat_success');
+          await this.logInitMemory('compat_success', modelSize);
+        } catch (compatError) {
+          console.log('init_model_compat_failed', compatError);
+          await this.logInitFailure('compat_failed', compatError, modelSize, compatParams);
+          if (Platform.OS === 'android') {
+            const retryParams = {
+              ...compatParams,
+              n_gpu_layers: 0,
+              use_mlock: false,
+              use_mmap: false,
+            };
+            console.log('init_model_android_fallback', JSON.stringify(retryParams, null, 2));
+            this.context = await initLlama(retryParams);
+            console.log('init_model_fallback_success');
+            await this.logInitMemory('android_fallback_success', modelSize);
+          } else {
+            throw compatError;
+          }
         }
       }
 
@@ -240,6 +366,10 @@ class LlamaManager {
       return this.context;
     } catch (error) {
       console.log('init_model_exception', error);
+      await this.logInitFailure('final_exception', error, 0, {
+        modelPath,
+        mmProjectorPath,
+      });
       this.emergencyCleanup();
       throw new Error(`model_init_failed: ${error}`);
     }
@@ -635,10 +765,11 @@ class LlamaManager {
           })
         ]).catch(() => {});
         
-        this.context = await initLlama({
+        const resetInitParams = this.toCompatInitParams({
           model: currentModelPath,
           ...LLAMA_INIT_CONFIG,
         });
+        this.context = await initLlama(resetInitParams);
 
         if (currentMmProjectorPath) {
           await this.multimodalService.initMultimodal(this.context, currentMmProjectorPath);
