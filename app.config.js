@@ -1,7 +1,7 @@
 export default {
   expo: {
     name: "InferrLM",
-    slug: "inferra",
+    slug: "inferrlm",
     owner: "subhajitgorai",
     version: "0.7.9",
     orientation: "default",
