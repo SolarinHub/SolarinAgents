@@ -75,7 +75,15 @@ class EngineService {
     if (modelFormat === 'gguf') return 'llama';
     if (modelFormat === 'mlx') return 'mlx';
     const lower = modelPath.toLowerCase();
-    return lower.endsWith('.gguf') ? 'llama' : 'mlx';
+    if (lower.endsWith('.gguf')) return 'llama';
+    if (
+      lower.endsWith('.safetensors') ||
+      lower.endsWith('.json') ||
+      lower.includes('/huggingface/models/') ||
+      lower.includes('mlx-community') ||
+      lower.includes('mlx')
+    ) return 'mlx';
+    return 'llama';
   }
 
   async initModel(modelPath: string, projectorPath?: string, modelFormat?: string) {

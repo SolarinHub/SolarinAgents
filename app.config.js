@@ -122,6 +122,7 @@ export default {
       "expo-font",
       "expo-web-browser",
       "expo-asset",
+      "expo-localization",
       "expo-background-task",
       "expo-router",
       "expo-secure-store",
