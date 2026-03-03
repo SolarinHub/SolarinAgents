@@ -141,7 +141,7 @@ export default function ModelScreen({ navigation }: ModelScreenProps) {
         />
 
         <View style={styles.contentContainer}>
-          {logic.activeTab === 'stored' ? (
+          <View style={[styles.tabPane, logic.activeTab !== 'stored' && styles.hiddenPane]}>
             <StoredModelsTab
               storedModels={logic.storedModels}
               isLoading={logic.isLoadingStoredModels}
@@ -152,7 +152,9 @@ export default function ModelScreen({ navigation }: ModelScreenProps) {
               onExport={handleExport}
               onSettings={logic.handleModelSettings}
             />
-          ) : logic.activeTab === 'downloadable' ? (
+          </View>
+
+          <View style={[styles.tabPane, logic.activeTab !== 'downloadable' && styles.hiddenPane]}>
             <DownloadableModelsTab
               storedModels={logic.storedModels}
               downloadProgress={logic.downloadProgress}
@@ -160,9 +162,11 @@ export default function ModelScreen({ navigation }: ModelScreenProps) {
               navigation={navigation}
               onCustomDownload={logic.handleCustomDownload}
             />
-          ) : (
+          </View>
+
+          <View style={[styles.tabPane, logic.activeTab !== 'remote' && styles.hiddenPane]}>
             <RemoteModelsTab />
-          )}
+          </View>
         </View>
       </View>
       
@@ -226,6 +230,12 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingTop: 8,
+  },
+  tabPane: {
+    flex: 1,
+  },
+  hiddenPane: {
+    display: 'none',
   },
   floatingButton: {
     position: 'absolute',
