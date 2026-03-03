@@ -52,6 +52,11 @@ class MlxManager implements InferenceManager {
     return `${docsDir}huggingface/models/${modelId}`;
   }
 
+  private getNitroBaseDir(): string {
+    const docsDir = FileSystem.documentDirectory || '';
+    return `${docsDir}huggingface/models`;
+  }
+
   private async pathExists(path: string): Promise<boolean> {
     try {
       const info = await FileSystem.getInfoAsync(path);
@@ -92,11 +97,14 @@ class MlxManager implements InferenceManager {
     try {
       const sourceDir = this.getMlxDir(modelId);
       const targetDir = this.getNitroDir(modelId);
+      const nitroBaseDir = this.getNitroBaseDir();
 
       const sourceInfo = await FileSystem.getInfoAsync(sourceDir);
       if (!sourceInfo.exists || !(sourceInfo as any).isDirectory) {
         return false;
       }
+
+      await FileSystem.makeDirectoryAsync(nitroBaseDir, { intermediates: true });
 
       const targetInfo = await FileSystem.getInfoAsync(targetDir);
       if (!targetInfo.exists) {
