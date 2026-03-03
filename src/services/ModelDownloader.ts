@@ -70,11 +70,14 @@ class ModelDownloader extends EventEmitter {
       this.emit('downloadStarted', data);
     });
     
-    this.downloadTaskManager.on('downloadCompleted', (data) => {
+    this.downloadTaskManager.on('downloadCompleted', async (data) => {
       if (data.modelName?.startsWith('temp_mlx_')) {
         return;
       }
-      this.storedModelsManager.refresh();
+      try {
+        await this.storedModelsManager.refresh();
+      } catch {
+      }
       notificationService.showDownloadCompletedNotification(
         data.modelName,
         data.downloadId,
@@ -261,7 +264,7 @@ class ModelDownloader extends EventEmitter {
       
       await this.fileManager.cleanupTempDirectory(this.getActiveDownloadNames());
       
-      await this.storedModelsManager.refreshStoredModels();
+      await this.storedModelsManager.refresh();
     } catch (error) {
     }
   }

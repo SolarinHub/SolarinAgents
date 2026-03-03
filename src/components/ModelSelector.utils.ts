@@ -102,7 +102,7 @@ export const groupMLXModels = (items: StoredModel[]): (StoredModel | MLXGroup)[]
   const others: StoredModel[] = [];
 
   items.forEach(model => {
-    const dirPath = model.path.substring(0, model.path.lastIndexOf('/'));
+    const dirPath = model.isDirectory ? model.path : model.path.substring(0, model.path.lastIndexOf('/'));
     const dirName = dirPath.split('/').pop() || '';
 
     if (dirName) {

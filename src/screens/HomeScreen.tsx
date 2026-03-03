@@ -607,7 +607,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       console.log('local_process_message_error', error instanceof Error ? error.message : 'unknown');
       showDialog(
         'Error',
-        'Failed to generate response',
+        'Failed to generate response. Model might not be supported.',
         [<Button key="ok" onPress={hideDialog}>OK</Button>]
       );
       resetStreamingState();
