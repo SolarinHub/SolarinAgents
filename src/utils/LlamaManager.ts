@@ -563,23 +563,10 @@ class LlamaManager {
       throw new Error('Model not initialized');
     }
 
-    console.log('gen_response_start', {
-      messageCount: messages.length,
-      hasOnToken: typeof onToken === 'function',
-      hasCustomSettings: customSettings !== undefined
-    });
-
     let fullResponse = '';
     this.isCancelled = false;
     this.tokenProcessingService.setCancelled(false);
     const settings = customSettings ?? this.settingsManager.getSettings();
-    console.log('gen_response_settings', {
-      maxTokens: settings.maxTokens,
-      temperature: settings.temperature,
-      stopWordsCount: settings.stopWords?.length,
-      drySequenceBreakersCount: settings.drySequenceBreakers?.length,
-      logitBiasCount: settings.logitBias?.length
-    });
     const stop = [...settings.stopWords, '\n', '\\n'];
 
     try {
@@ -618,11 +605,6 @@ class LlamaManager {
         })
       );
 
-      console.log('gen_response_processed_messages', {
-        count: processedMessages.length,
-        roles: processedMessages.map(m => m.role)
-      });
-
       const mediaStats = processedMessages.map((message, index) => {
         if (!Array.isArray(message.content)) {
           return { index, role: message.role, media: 0 };
@@ -631,7 +613,6 @@ class LlamaManager {
         return { index, role: message.role, media: mediaCount };
       });
       const totalMedia = mediaStats.reduce((sum, item) => sum + item.media, 0);
-      console.log('gen_response_media_stats', { totalMedia, mediaStats });
 
       let tokenCount = 0;
 
@@ -676,13 +657,6 @@ class LlamaManager {
           ...baseCompletionParams,
           messages: messagesForCompletion,
         };
-
-        console.log('gen_response_calling_completion', {
-          stage,
-          messagesCount: completionParams.messages.length,
-          n_predict: completionParams.n_predict,
-          temperature: completionParams.temperature,
-        });
 
         await this.context!.completion(
           completionParams,

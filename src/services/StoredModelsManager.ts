@@ -84,11 +84,9 @@ export class StoredModelsManager extends EventEmitter {
   }
 
   async getStoredModels(): Promise<StoredModel[]> {
-    console.log('get_models_start');
     try {
       const storedData = await AsyncStorage.getItem(this.STORAGE_KEY);
       if (storedData) {
-        console.log('models_from_storage');
         return JSON.parse(storedData);
       }
     } catch (error) {

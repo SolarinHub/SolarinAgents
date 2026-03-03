@@ -95,7 +95,6 @@ export default function ChatView({
   onEditingStateChange,
   onStartEdit,
 }: ChatViewProps) {
-  console.log('chatview_render', { messageCount: messages.length, messages: messages.map(m => ({ id: m.id, role: m.role, content: m.content.substring(0, 50) })) });
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();

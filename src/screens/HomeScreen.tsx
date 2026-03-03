@@ -319,11 +319,8 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
   }, []);
 
   const handleSend = async (text: string) => {
-    console.log('mlx_homescreen_handleSend_ENTERED', { text: text.substring(0, 50) });
     const messageText = text.trim();
-    console.log('mlx_homescreen_after_trim', { messageText, length: messageText.length });
     if (!messageText) {
-      console.log('mlx_homescreen_empty_message');
       return;
     }
 
@@ -338,15 +335,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       chatManager.setCurrentProvider(providerFromSelection);
     }
     
-    console.log('mlx_homescreen_send_start', {
-      messageLength: messageText.length,
-      modelPath: engineService.getActiveModelPath(),
-      activeProvider: effectiveProvider,
-      engine: engineService.get()
-    });
-
     if (!engineService.getActiveModelPath() && !effectiveProvider) {
-      console.log('mlx_homescreen_no_model', { modelPath: engineService.getActiveModelPath(), activeProvider: effectiveProvider });
       setShouldOpenModelSelector(true);
       return;
     }
@@ -363,10 +352,8 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
         role: 'user',
       };
       
-      console.log('mlx_homescreen_adding_message', { content: messageText.substring(0, 100) });
       const success = await chatManager.addMessage(userMessage);
       if (!success) {
-        console.log('mlx_homescreen_add_message_failed');
         showDialog(
           'Error',
           'Failed to add message to chat',
@@ -376,29 +363,18 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       }
 
       const updatedChat = chatManager.getCurrentChat();
-      console.log('mlx_homescreen_updatedChat', { 
-        hasChat: !!updatedChat, 
-        messageCount: updatedChat?.messages.length,
-        lastMessage: updatedChat?.messages[updatedChat.messages.length - 1]
-      });
       if (updatedChat) {
         setMessages([...updatedChat.messages]);
-        console.log('mlx_homescreen_setMessages_called', { messageCount: updatedChat.messages.length });
       }
       
-      console.log('mlx_homescreen_message_added', { success });
-      console.log('mlx_homescreen_process_start');
       await processMessage(effectiveProvider);
-      console.log('mlx_homescreen_process_complete');
     } catch (error) {
-      console.log('mlx_homescreen_send_error', { error, message: error instanceof Error ? error.message : 'unknown', stack: error instanceof Error ? error.stack : undefined });
       showDialog(
         'Error',
         'Failed to send message',
         [<Button key="ok" onPress={hideDialog}>OK</Button>]
       );
     } finally {
-      console.log('mlx_homescreen_finally_block');
       setIsLoading(false);
     }
   };
@@ -617,34 +593,18 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     const currentChat = chatManager.getCurrentChat();
     if (!currentChat) return;
 
-    console.log('mlx_process_message_start', {
-      chatId: currentChat.id,
-      messageCount: currentChat.messages.length,
-      activeProvider: provider,
-      engine: engineService.get()
-    });
-
     try {
       await stopGenerationIfRunning();
       const settings = providerOverride
         ? await ChatLifecycleService.getEffectiveSettings(providerOverride)
         : await getEffectiveSettings();
-      
-      console.log('mlx_process_calling_service', { 
-        activeProvider: provider, 
-        settings: { 
-          temperature: settings.temperature, 
-          maxTokens: settings.maxTokens 
-        } 
-      });
 
       await messageProcessingService.processMessage(
         provider,
         settings
       );
-      console.log('mlx_process_message_complete');
     } catch (error) {
-      console.log('mlx_process_message_error', error instanceof Error ? error.message : 'unknown');
+      console.log('local_process_message_error', error instanceof Error ? error.message : 'unknown');
       showDialog(
         'Error',
         'Failed to generate response',
