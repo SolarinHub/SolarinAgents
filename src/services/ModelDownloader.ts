@@ -42,6 +42,9 @@ class ModelDownloader extends EventEmitter {
 
     // Forward DownloadTaskManager events
     this.downloadTaskManager.on('progress', (data) => {
+      if (data.modelName?.startsWith('temp_mlx_')) {
+        return;
+      }
       notificationService.updateDownloadProgressNotification(
         data.modelName,
         data.downloadId,
@@ -55,6 +58,9 @@ class ModelDownloader extends EventEmitter {
     });
     
     this.downloadTaskManager.on('downloadStarted', (data) => {
+      if (data.modelName?.startsWith('temp_mlx_')) {
+        return;
+      }
       notificationService.showDownloadStartedNotification(
         data.modelName,
         data.downloadId,
@@ -65,6 +71,9 @@ class ModelDownloader extends EventEmitter {
     });
     
     this.downloadTaskManager.on('downloadCompleted', (data) => {
+      if (data.modelName?.startsWith('temp_mlx_')) {
+        return;
+      }
       this.storedModelsManager.refresh();
       notificationService.showDownloadCompletedNotification(
         data.modelName,
@@ -76,6 +85,9 @@ class ModelDownloader extends EventEmitter {
     });
     
     this.downloadTaskManager.on('downloadFailed', (data) => {
+      if (data.modelName?.startsWith('temp_mlx_')) {
+        return;
+      }
       notificationService.showDownloadFailedNotification(
         data.modelName,
         data.downloadId,
@@ -86,6 +98,9 @@ class ModelDownloader extends EventEmitter {
     });
 
     this.downloadTaskManager.on('downloadCancelled', (data) => {
+      if (data.modelName?.startsWith('temp_mlx_')) {
+        return;
+      }
       notificationService.showDownloadCancelledNotification(
         data.modelName,
         data.downloadId,
@@ -287,6 +302,13 @@ class ModelDownloader extends EventEmitter {
       totalBytes: d.totalBytes || 0,
       status: d.status || 'downloading',
     }));
+  }
+
+  async getMLXPackageManifest(packageName: string): Promise<string[]> {
+    if (!this.isInitialized) {
+      await this.initializationPromise;
+    }
+    return this.downloadTaskManager.getMLXManifest(packageName);
   }
 }
 

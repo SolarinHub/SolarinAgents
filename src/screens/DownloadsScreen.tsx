@@ -26,6 +26,30 @@ const formatBytes = (bytes: number) => {
   return `${(bytes / Math.pow(k, index)).toFixed(2)} ${sizes[index]}`;
 };
 
+const listFilesDeep = async (rootDir: string, currentDir: string = rootDir): Promise<string[]> => {
+  const entries = await FileSystem.readDirectoryAsync(currentDir);
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const fullPath = `${currentDir}/${entry}`;
+    const info = await FileSystem.getInfoAsync(fullPath);
+
+    if (!info.exists) {
+      continue;
+    }
+
+    if (info.isDirectory) {
+      const nested = await listFilesDeep(rootDir, fullPath);
+      files.push(...nested);
+    } else {
+      const relative = fullPath.replace(`${rootDir}/`, '');
+      files.push(relative);
+    }
+  }
+
+  return files;
+};
+
 interface DownloadItem {
   id: number;
   name: string;
@@ -92,7 +116,7 @@ export default function DownloadsScreen() {
           }
 
           const packageName = match[1];
-          const fileName = match[2].split('/').pop() || match[2];
+          const fileName = match[2];
 
           if (!grouped[packageName]) {
             grouped[packageName] = new Set<string>();
@@ -106,11 +130,22 @@ export default function DownloadsScreen() {
           .map(([name]) => name);
 
         for (const packageName of activePackageNames) {
+          try {
+            const manifestFiles = await modelDownloader.getMLXPackageManifest(packageName);
+            if (!grouped[packageName]) {
+              grouped[packageName] = new Set<string>();
+            }
+            for (const file of manifestFiles) {
+              grouped[packageName].add(file);
+            }
+          } catch {
+          }
+
           const packageDir = `${FileSystem.documentDirectory}models/mlx/${packageName}`;
           try {
             const dirInfo = await FileSystem.getInfoAsync(packageDir);
             if (dirInfo.exists && dirInfo.isDirectory) {
-              const files = await FileSystem.readDirectoryAsync(packageDir);
+              const files = await listFilesDeep(packageDir);
               if (!grouped[packageName]) {
                 grouped[packageName] = new Set<string>();
               }

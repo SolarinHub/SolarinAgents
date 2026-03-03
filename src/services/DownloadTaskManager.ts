@@ -15,6 +15,7 @@ export class DownloadTaskManager extends EventEmitter {
   private tempNameMap: Map<string, string> = new Map();
   private startedDisplayNames: Set<string> = new Set();
   private readonly DOWNLOAD_PROGRESS_KEY = 'download_progress_state';
+  private readonly MLX_PACKAGE_MANIFEST_KEY = 'mlx_package_manifest';
   private isInitialized: boolean = false;
   private manualCancellationSet: Set<string> = new Set<string>();
 
@@ -437,6 +438,53 @@ export class DownloadTaskManager extends EventEmitter {
     return Array.from(this.activeDownloads.values());
   }
 
+  async getMLXManifest(packageName: string): Promise<string[]> {
+    try {
+      const key = mlxStorageManager.sanitizeModelId(packageName);
+      const raw = await AsyncStorage.getItem(this.MLX_PACKAGE_MANIFEST_KEY);
+      if (!raw) {
+        return [];
+      }
+      const parsed = JSON.parse(raw) as Record<string, string[]>;
+      const files = parsed[key];
+      return Array.isArray(files) ? files : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private async saveMLXManifest(packageName: string, files: string[]): Promise<void> {
+    try {
+      const key = mlxStorageManager.sanitizeModelId(packageName);
+      const existingRaw = await AsyncStorage.getItem(this.MLX_PACKAGE_MANIFEST_KEY);
+      const existing = existingRaw ? (JSON.parse(existingRaw) as Record<string, string[]>) : {};
+      existing[key] = Array.from(new Set(files));
+      await AsyncStorage.setItem(this.MLX_PACKAGE_MANIFEST_KEY, JSON.stringify(existing));
+    } catch {
+    }
+  }
+
+  private async removeMLXManifest(packageName: string): Promise<void> {
+    try {
+      const key = mlxStorageManager.sanitizeModelId(packageName);
+      const existingRaw = await AsyncStorage.getItem(this.MLX_PACKAGE_MANIFEST_KEY);
+      if (!existingRaw) {
+        return;
+      }
+      const existing = JSON.parse(existingRaw) as Record<string, string[]>;
+      if (!(key in existing)) {
+        return;
+      }
+      delete existing[key];
+      if (Object.keys(existing).length === 0) {
+        await AsyncStorage.removeItem(this.MLX_PACKAGE_MANIFEST_KEY);
+      } else {
+        await AsyncStorage.setItem(this.MLX_PACKAGE_MANIFEST_KEY, JSON.stringify(existing));
+      }
+    } catch {
+    }
+  }
+
   private async saveDownloadProgress(): Promise<void> {
     try {
       const progressState = {
@@ -529,6 +577,7 @@ export class DownloadTaskManager extends EventEmitter {
 
     const modelDir = await mlxStorageManager.createMLXDirectory(effectiveModelId);
     const downloadId = this.nextDownloadId++;
+    await this.saveMLXManifest(sanitizedModelId, files.map(file => file.filename));
 
     const tempDownloads: string[] = [];
     let downloadedBytes = 0;
@@ -613,6 +662,7 @@ export class DownloadTaskManager extends EventEmitter {
       }
 
       this.startedDisplayNames.delete(sanitizedModelId);
+      await this.removeMLXManifest(sanitizedModelId);
 
       const validation = await mlxStorageManager.validateMLXModel(effectiveModelId);
       if (!validation.valid) {
@@ -641,6 +691,7 @@ export class DownloadTaskManager extends EventEmitter {
       }
 
       this.startedDisplayNames.delete(sanitizedModelId);
+  await this.removeMLXManifest(sanitizedModelId);
 
       await mlxStorageManager.cleanupFailedMLXDownload(effectiveModelId);
 

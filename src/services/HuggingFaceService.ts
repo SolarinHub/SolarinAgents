@@ -319,34 +319,71 @@ class HuggingFaceService {
     let totalSize = 0;
     let isSharded = false;
 
-    const mlxRequiredFiles = [
-      'config.json',
-      'tokenizer.json',
-      'tokenizer_config.json',
-    ];
+    const configFiles: HFFile[] = [];
+    const tokenizerJsonFiles: HFFile[] = [];
+    const tokenizerModelFiles: HFFile[] = [];
+    const tokenizerConfigFiles: HFFile[] = [];
 
-    files.forEach(file => {
+    const pushRequired = (file: HFFile) => {
       const fileData: ModelFile = {
         rfilename: file.filename,
         size: file.size,
         url: file.downloadUrl,
       };
 
-      if (mlxRequiredFiles.includes(file.filename)) {
-        required.push(fileData);
-        totalSize += file.size;
-      } else if (file.filename.endsWith('.safetensors') || file.filename.endsWith('.npz')) {
-        required.push(fileData);
-        totalSize += file.size;
+      required.push(fileData);
+      totalSize += file.size;
+    };
+
+    files.forEach(file => {
+      const baseName = file.filename.split('/').pop()?.toLowerCase() || file.filename.toLowerCase();
+
+      if (baseName === 'config.json') {
+        configFiles.push(file);
+        return;
+      }
+
+      if (baseName === 'tokenizer.json') {
+        tokenizerJsonFiles.push(file);
+        return;
+      }
+
+      if (baseName === 'tokenizer.model') {
+        tokenizerModelFiles.push(file);
+        return;
+      }
+
+      if (baseName === 'tokenizer_config.json') {
+        tokenizerConfigFiles.push(file);
+        return;
+      }
+
+      if (file.filename.endsWith('.safetensors') || file.filename.endsWith('.npz')) {
+        pushRequired(file);
         if (file.filename.match(/model-\d+-of-\d+\.safetensors/)) {
           isSharded = true;
         }
       } else if (file.filename === 'generation_config.json' || 
                  file.filename === 'preprocessor_config.json' ||
                  file.filename === 'special_tokens_map.json') {
+        const fileData: ModelFile = {
+          rfilename: file.filename,
+          size: file.size,
+          url: file.downloadUrl,
+        };
         optional.push(fileData);
       }
     });
+
+    configFiles.forEach(pushRequired);
+
+    if (tokenizerJsonFiles.length > 0) {
+      tokenizerJsonFiles.forEach(pushRequired);
+    } else {
+      tokenizerModelFiles.forEach(pushRequired);
+    }
+
+    tokenizerConfigFiles.forEach(pushRequired);
 
     return {
       required,
