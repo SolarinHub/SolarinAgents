@@ -18,6 +18,11 @@ import { StoredModel } from '../services/ModelDownloaderTypes';
 const BACKGROUND_DOWNLOAD_TASK = 'background-download-task';
 const isAndroid = Platform.OS === 'android';
 
+type ModelRouteParams = {
+  autoEnableRemoteModels?: boolean;
+  openRemoteTab?: boolean;
+};
+
 TaskManager.defineTask(BACKGROUND_DOWNLOAD_TASK, async ({ data, error }) => {
   if (error) {
     return BackgroundTask.BackgroundTaskResult.Failed;
@@ -38,8 +43,8 @@ const registerBackgroundTask = async () => {
   }
 };
 
-export const useModelScreenLogic = (navigation: any) => {
-  const { enableRemoteModels, isLoggedIn, checkLoginStatus } = useRemoteModel();
+export const useModelScreenLogic = (navigation: any, routeParams?: ModelRouteParams) => {
+  const { enableRemoteModels, isLoggedIn, checkLoginStatus, toggleRemoteModels } = useRemoteModel();
   const { storedModels, isLoading: isLoadingStoredModels, isRefreshing: isRefreshingStoredModels, refreshStoredModels, rescanStoredModels } = useStoredModels();
   const { downloadProgress, setDownloadProgress } = useDownloads();
   
@@ -52,6 +57,7 @@ export const useModelScreenLogic = (navigation: any) => {
   const [username, setUsername] = useState<string | null>(null);
   
   const buttonScale = useRef(new Animated.Value(1)).current;
+  const remoteIntentHandled = useRef(false);
 
   useEffect(() => {
     checkLoginStatusAndUpdateUsername();
@@ -261,6 +267,42 @@ export const useModelScreenLogic = (navigation: any) => {
       setActiveTab('stored');
     }
   }, [enableRemoteModels, activeTab]);
+
+  useEffect(() => {
+    if (remoteIntentHandled.current) {
+      return;
+    }
+
+    const shouldAutoEnableRemote = routeParams?.autoEnableRemoteModels === true;
+    const shouldOpenRemoteTab = routeParams?.openRemoteTab === true;
+
+    if (!shouldAutoEnableRemote && !shouldOpenRemoteTab) {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      return;
+    }
+
+    const applyIntent = async () => {
+      try {
+        let canOpenRemoteTab = enableRemoteModels;
+
+        if (shouldAutoEnableRemote && !enableRemoteModels) {
+          const result = await toggleRemoteModels();
+          canOpenRemoteTab = result.success || enableRemoteModels;
+        }
+
+        if (shouldOpenRemoteTab && canOpenRemoteTab) {
+          setActiveTab('remote');
+        }
+      } finally {
+        remoteIntentHandled.current = true;
+      }
+    };
+
+    applyIntent();
+  }, [routeParams, isLoggedIn, enableRemoteModels, toggleRemoteModels]);
 
   useEffect(() => {
     const handleProgress = async ({ modelName, ...progress }: any) => {
