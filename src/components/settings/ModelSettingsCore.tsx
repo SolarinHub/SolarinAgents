@@ -1,11 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Switch, Platform, Linking } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Switch, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import InferenceEngineSection from './InferenceEngine';
-
-const OPENCL_DOCS_URL = 'https://github.com/ggml-org/llama.cpp/blob/master/docs/backend/OPENCL.md#model-preparation';
 
 export type GpuConfig = {
   label: string;
@@ -50,8 +48,6 @@ const ModelSettingsCore = ({
   onEngineToggle,
   gpuConfig,
   onToggleGpu,
-  onGpuLayersChange,
-  onDialogOpen,
 }: ModelSettingsCoreProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
@@ -59,9 +55,7 @@ const ModelSettingsCore = ({
 
   const showGpuSettings = Boolean(
     gpuConfig &&
-    onToggleGpu &&
-    onGpuLayersChange &&
-    typeof onDialogOpen === 'function'
+    onToggleGpu
   );
 
   const gpuSupportMessage = React.useMemo(() => {
@@ -88,20 +82,6 @@ const ModelSettingsCore = ({
         return null;
     }
   }, [gpuConfig]);
-
-  const handleGpuLayersReset = React.useCallback(() => {
-    if (!gpuConfig || !onGpuLayersChange) {
-      return;
-    }
-
-    try {
-      const result = onGpuLayersChange(gpuConfig.defaultValue);
-      if (result && typeof (result as Promise<void>).catch === 'function') {
-        (result as Promise<void>).catch(() => {});
-      }
-    } catch (error) {
-    }
-  }, [gpuConfig, onGpuLayersChange]);
 
   return (
     <>
@@ -255,101 +235,6 @@ const ModelSettingsCore = ({
               thumbColor={gpuConfig.enabled ? themeColors.primary : themeColors.background}
             />
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.settingItem,
-              styles.settingItemBorder,
-              styles.settingItemBottomBorder,
-              (!gpuConfig.enabled || !gpuConfig.supported) && styles.disabledSettingItem,
-            ]}
-            disabled={!gpuConfig.enabled || !gpuConfig.supported}
-            onPress={() => {
-              if (!gpuConfig.enabled || !gpuConfig.supported) {
-                return;
-              }
-
-              onDialogOpen({
-                label: 'Layers on GPU',
-                value: gpuConfig.value,
-                defaultValue: gpuConfig.defaultValue,
-                minimumValue: gpuConfig.min,
-                maximumValue: gpuConfig.max,
-                step: 1,
-                description:
-                  'Number of transformer layers executed on the GPU. Higher values reduce CPU load but require more GPU memory.',
-                onSave: onGpuLayersChange,
-              });
-            }}
-          >
-            <View style={styles.settingLeft}>
-              <View
-                style={[
-                  styles.iconContainer,
-                  {
-                    backgroundColor:
-                      currentTheme === 'dark'
-                        ? 'rgba(255, 255, 255, 0.2)'
-                        : themeColors.primary + '20',
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons name="layers-triple" size={22} color={iconColor} />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <View style={styles.labelRow}>
-                  <Text style={[styles.settingText, { color: themeColors.text }]}>
-                    Layers on GPU
-                  </Text>
-                  <Text style={[styles.valueText, { color: themeColors.text }]}>
-                    {gpuConfig.value}
-                  </Text>
-                </View>
-                <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-                  Higher values push more transformer layers to the GPU for faster inference.
-                </Text>
-                {Platform.OS === 'android' && gpuConfig.supported && (
-                  <View>
-                    <Text style={[styles.settingDescription, { color: themeColors.secondaryText, marginTop: 8 }]}>
-                      Note: Pure Q4_0 quantized models perform best with OpenCL.
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => Linking.openURL(OPENCL_DOCS_URL)}
-                      style={styles.linkContainer}
-                    >
-                      <Text style={[styles.settingDescription, { color: themeColors.primary }]}>
-                        See llama.cpp OpenCL docs for details
-                      </Text>
-                      <MaterialCommunityIcons
-                        name="open-in-new"
-                        size={12}
-                        color={themeColors.primary}
-                        style={styles.linkIcon}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {gpuConfig.value !== gpuConfig.defaultValue && (
-                  <TouchableOpacity
-                    onPress={handleGpuLayersReset}
-                    style={[
-                      styles.resetButton,
-                      {
-                        backgroundColor:
-                          currentTheme === 'dark'
-                            ? 'rgba(255, 255, 255, 0.2)'
-                            : themeColors.primary + '20',
-                      },
-                    ]}
-                  >
-                    <MaterialCommunityIcons name="refresh" size={14} color={iconColor} />
-                    <Text style={[styles.resetText, { color: iconColor }]}>Reset to Default</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />
-          </TouchableOpacity>
         </>
       )}
     </>
@@ -401,10 +286,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 2,
   },
-  valueText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
   resetButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,14 +314,6 @@ const styles = StyleSheet.create({
   },
   disabledSettingItem: {
     opacity: 0.5,
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  linkIcon: {
-    marginLeft: 4,
   },
 });
 

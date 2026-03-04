@@ -670,7 +670,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     const handleApiKeyRequired = (model: OnlineModel) => {
       showDialog(
         'API Key Required',
-        `${model.name} by ${model.provider} requires an API key. Please configure it in Settings.`,
+        `${model.name} by ${model.provider} requires an API key. Please configure it in Models > Remote Models.`,
         [<Button key="ok" onPress={hideDialog}>OK</Button>]
       );
     };
