@@ -50,15 +50,15 @@ const licenses: License[] = [
     name: 'react-native-nitro-mlx',
     description: 'MLX on-device inference for React Native via Nitro Modules',
     licenseType: 'MIT License',
-    licenseUrl: 'https://github.com/software-mansion/react-native-nitro-mlx/blob/main/LICENSE',
-    repositoryUrl: 'https://github.com/software-mansion/react-native-nitro-mlx'
+    licenseUrl: 'https://github.com/corasan/react-native-nitro-mlx/blob/main/LICENSE',
+    repositoryUrl: 'https://github.com/corasan/react-native-nitro-mlx'
   },
   {
     name: 'react-native-nitro-markdown',
     description: 'High-performance Markdown renderer for React Native',
     licenseType: 'MIT License',
-    licenseUrl: 'https://github.com/software-mansion/react-native-nitro-markdown/blob/main/LICENSE',
-    repositoryUrl: 'https://github.com/software-mansion/react-native-nitro-markdown'
+    licenseUrl: 'https://github.com/JoaoPauloCMarra/react-native-nitro-markdown/blob/main/LICENSE',
+    repositoryUrl: 'https://github.com/JoaoPauloCMarra/react-native-nitro-markdown'
   },
   {
     name: 'react-native-nitro-modules',
@@ -106,15 +106,15 @@ const licenses: License[] = [
     name: 'react-native-pdf-page-image',
     description: 'Convert PDF pages to images in React Native',
     licenseType: 'MIT License',
-    licenseUrl: 'https://github.com/douglasjunior/react-native-pdf-page-image/blob/main/LICENSE',
-    repositoryUrl: 'https://github.com/douglasjunior/react-native-pdf-page-image'
+    licenseUrl: 'https://github.com/jesusbmx/react-native-pdf-page-image/blob/main/LICENSE',
+    repositoryUrl: 'https://github.com/jesusbmx/react-native-pdf-page-image'
   },
   {
     name: 'react-native-qrcode-styled',
     description: 'Customizable QR code generator for React Native',
     licenseType: 'MIT License',
-    licenseUrl: 'https://github.com/wuba/react-native-echarts/blob/main/LICENSE',
-    repositoryUrl: 'https://github.com/andre-abadi/react-native-qrcode-styled'
+    licenseUrl: 'https://github.com/tokkozhin/react-native-qrcode-styled/blob/main/LICENSE',
+    repositoryUrl: 'https://github.com/tokkozhin/react-native-qrcode-styled'
   },
   {
     name: 'react-native-tcp-socket',
@@ -162,7 +162,7 @@ const licenses: License[] = [
     name: '@dr.pogodin/react-native-fs',
     description: 'Native filesystem access for React Native',
     licenseType: 'MIT License',
-    licenseUrl: 'https://github.com/birdofpreyru/react-native-fs/blob/master/LICENSE',
+    licenseUrl: 'https://github.com/birdofpreyru/react-native-fs/blob/main/LICENSE',
     repositoryUrl: 'https://github.com/birdofpreyru/react-native-fs'
   },
   {
@@ -175,7 +175,7 @@ const licenses: License[] = [
   {
     name: 'react-native-in-app-review',
     description: 'Native in-app review functionality',
-    licenseType: 'MIT License',
+    licenseUrl: 'https://github.com/react-native-menu/menu/blob/master/LICENSE',
     licenseUrl: 'https://github.com/MinaSamir11/react-native-in-app-review/blob/master/LICENSE',
     repositoryUrl: 'https://github.com/MinaSamir11/react-native-in-app-review'
   },
