@@ -129,6 +129,39 @@ class ChatManager {
     return this.cache.filter(c => c.parentChatId === rootId).length;
   }
 
+  async forkChat(fromMsgIndex: number): Promise<Chat | null> {
+    try {
+      await this.ensureInitialized();
+      if (!this.currentChatId) return null;
+
+      const chat = this.getChatById(this.currentChatId);
+      if (!chat) return null;
+      if (fromMsgIndex < 0 || fromMsgIndex >= chat.messages.length) return null;
+
+      const copiedMsgs = chat.messages.slice(0, fromMsgIndex + 1).map(m => ({
+        ...m,
+        id: generateRandomId(),
+      }));
+
+      const fork: Chat = {
+        id: generateRandomId(),
+        title: chat.title,
+        messages: copiedMsgs,
+        timestamp: Date.now(),
+        modelPath: chat.modelPath,
+      };
+
+      this.cache.unshift(fork);
+      this.currentChatId = fork.id;
+      await this.persistCurrentChat();
+      await this.saveChat(fork);
+      this.notifyListeners();
+      return fork;
+    } catch (error) {
+      return null;
+    }
+  }
+
   getCurrentChat(): Chat | null {
     if (!this.currentChatId) return null;
     return this.getChatById(this.currentChatId);

@@ -634,6 +634,14 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     }
   }, [handleCancelEdit]);
 
+  const handleForkChat = useCallback(async (fromMsgIndex: number) => {
+    const fork = await chatManager.forkChat(fromMsgIndex);
+    if (fork) {
+      setChat(fork);
+      setMessages([...fork.messages]);
+    }
+  }, []);
+
   const handleRegenerate = async () => {
     if (messages.length < 2) return;
     
@@ -774,6 +782,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
            onStartEdit={handleStartEdit}
            chatId={chat?.id}
            onSwitchBranch={handleSwitchBranch}
+           onForkChat={handleForkChat}
         />
 
         <ChatInput

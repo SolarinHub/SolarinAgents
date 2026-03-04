@@ -56,6 +56,7 @@ type ChatViewProps = {
   onStartEdit?: (messageId: string, content: string) => void;
   chatId?: string;
   onSwitchBranch?: (branchChatId: string) => void;
+  onForkChat?: (fromMsgIndex: number) => void;
 };
 
 const hasMarkdownFormatting = (content: string): boolean => {
@@ -98,6 +99,7 @@ export default function ChatView({
   onStartEdit,
   chatId,
   onSwitchBranch,
+  onForkChat,
 }: ChatViewProps) {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
@@ -467,6 +469,19 @@ export default function ChatView({
               {item.role === 'assistant' ? (
                 <TouchableOpacity 
                   style={styles.copyButton} 
+                  onPress={() => onForkChat?.(origIndex)}
+                  hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                >
+                  <MaterialCommunityIcons 
+                    name="source-branch" 
+                    size={16} 
+                    color={themeColors.text} 
+                  />
+                </TouchableOpacity>
+              ) : null}
+              {item.role === 'assistant' ? (
+                <TouchableOpacity 
+                  style={styles.copyButton} 
                   onPress={() => openReportDialog(messageContent, chatManager.getCurrentProvider() || 'local')}
                   hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
                 >
@@ -674,7 +689,7 @@ export default function ChatView({
         ) : null}
       </View>
     );
-  }, [themeColors, messages, isStreaming, streamingMessageId, streamingMessage, streamingThinking, streamingStats, onCopyText, isRegenerating, onRegenerateResponse, justCancelled, openImageViewer, startEditing, formatTime, formatDuration, branchInfoMap, onSwitchBranch]);
+  }, [themeColors, messages, isStreaming, streamingMessageId, streamingMessage, streamingThinking, streamingStats, onCopyText, isRegenerating, onRegenerateResponse, justCancelled, openImageViewer, startEditing, formatTime, formatDuration, branchInfoMap, onSwitchBranch, onForkChat]);
 
   const renderContent = () => {
     if (messages.length === 0) {
