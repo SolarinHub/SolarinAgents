@@ -65,7 +65,11 @@ type DialogSettingConfig = {
   onSave?: (value: number) => Promise<void> | void;
 };
 
-const PRIVACY_POLICY_URL = 'https://inferrlm.app/privacy-policy';
+const IN_APP_BROWSER_URLS = new Set([
+  'https://inferrlm.app/privacy-policy',
+  'https://github.com/sbhjt-gr/inferra',
+  'https://github.com/sbhjt-gr/inferra/issues',
+]);
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const { theme: currentTheme, selectedTheme, toggleTheme } = useTheme();
@@ -370,7 +374,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const openLink = async (url: string) => {
     try {
-      if (url === PRIVACY_POLICY_URL) {
+      if (IN_APP_BROWSER_URLS.has(url)) {
         await WebBrowser.openBrowserAsync(url);
         return;
       }
