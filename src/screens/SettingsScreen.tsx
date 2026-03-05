@@ -71,6 +71,8 @@ const IN_APP_BROWSER_URLS = new Set([
   'https://github.com/sbhjt-gr/inferra/issues',
 ]);
 
+const normalizeLink = (url: string) => url.replace(/\/+$/, '');
+
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const { theme: currentTheme, selectedTheme, toggleTheme } = useTheme();
   const { enableRemoteModels, toggleRemoteModels, isLoggedIn } = useRemoteModel();
@@ -374,11 +376,12 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const openLink = async (url: string) => {
     try {
-      if (IN_APP_BROWSER_URLS.has(url)) {
-        await WebBrowser.openBrowserAsync(url);
+      const normalizedUrl = normalizeLink(url);
+      if (IN_APP_BROWSER_URLS.has(normalizedUrl)) {
+        await WebBrowser.openBrowserAsync(normalizedUrl);
         return;
       }
-      await Linking.openURL(url);
+      await Linking.openURL(normalizedUrl);
     } catch (error) {
       showDialog('Error', 'Failed to open link', [
         <Button key="ok" onPress={hideDialog}>OK</Button>,
