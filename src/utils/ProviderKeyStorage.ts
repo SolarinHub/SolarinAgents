@@ -6,6 +6,7 @@ interface ProviderKeyRecord {
   useDefault: number;
   modelName: string | null;
   baseUrl: string | null;
+  displayName: string | null;
 }
 
 class ProviderKeyStorage {
@@ -27,7 +28,8 @@ class ProviderKeyStorage {
         customKey TEXT,
         useDefault INTEGER,
         modelName TEXT,
-        baseUrl TEXT
+        baseUrl TEXT,
+        displayName TEXT
       );
 
       CREATE TABLE IF NOT EXISTS app_preferences (
@@ -46,6 +48,10 @@ class ProviderKeyStorage {
     if (!hasBaseUrl) {
       await this.db.execAsync('ALTER TABLE api_keys ADD COLUMN baseUrl TEXT;');
     }
+    const hasDisplayName = columns.some(col => col.name === 'displayName');
+    if (!hasDisplayName) {
+      await this.db.execAsync('ALTER TABLE api_keys ADD COLUMN displayName TEXT;');
+    }
   }
 
   private getDatabase(): SQLite.SQLiteDatabase {
@@ -56,7 +62,7 @@ class ProviderKeyStorage {
   async getEntry(provider: string): Promise<ProviderKeyRecord | null> {
     const db = this.getDatabase();
     const row = await db.getFirstAsync<ProviderKeyRecord>(
-      'SELECT provider, customKey, useDefault, modelName, baseUrl FROM api_keys WHERE provider = ?',
+      'SELECT provider, customKey, useDefault, modelName, baseUrl, displayName FROM api_keys WHERE provider = ?',
       [provider]
     );
 
@@ -70,7 +76,28 @@ class ProviderKeyStorage {
       useDefault: row.useDefault ?? 1,
       modelName: row.modelName ?? null,
       baseUrl: row.baseUrl ?? null,
+      displayName: row.displayName ?? null,
     };
+  }
+
+  async listAll(): Promise<ProviderKeyRecord[]> {
+    const db = this.getDatabase();
+    const rows = await db.getAllAsync<ProviderKeyRecord>(
+      'SELECT provider, customKey, useDefault, modelName, baseUrl, displayName FROM api_keys'
+    );
+    return rows.map(row => ({
+      provider: row.provider,
+      customKey: row.customKey ?? null,
+      useDefault: row.useDefault ?? 1,
+      modelName: row.modelName ?? null,
+      baseUrl: row.baseUrl ?? null,
+      displayName: row.displayName ?? null,
+    }));
+  }
+
+  async deleteEntry(provider: string): Promise<void> {
+    const db = this.getDatabase();
+    await db.runAsync('DELETE FROM api_keys WHERE provider = ?', [provider]);
   }
 
   async upsertEntry(provider: string, updates: Partial<ProviderKeyRecord>): Promise<void> {
@@ -81,12 +108,14 @@ class ProviderKeyStorage {
       useDefault: updates.useDefault !== undefined ? updates.useDefault : current?.useDefault ?? 1,
       modelName: updates.modelName !== undefined ? updates.modelName : current?.modelName ?? null,
       baseUrl: updates.baseUrl !== undefined ? updates.baseUrl : current?.baseUrl ?? null,
+      displayName: updates.displayName !== undefined ? updates.displayName : current?.displayName ?? null,
     };
 
     const db = this.getDatabase();
+    const displayName = record.displayName;
     await db.runAsync(
-      'INSERT INTO api_keys (provider, customKey, useDefault, modelName, baseUrl) VALUES (?, ?, ?, ?, ?) ON CONFLICT(provider) DO UPDATE SET customKey=excluded.customKey, useDefault=excluded.useDefault, modelName=excluded.modelName, baseUrl=excluded.baseUrl',
-      [record.provider, record.customKey, record.useDefault, record.modelName, record.baseUrl]
+      'INSERT INTO api_keys (provider, customKey, useDefault, modelName, baseUrl, displayName) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(provider) DO UPDATE SET customKey=excluded.customKey, useDefault=excluded.useDefault, modelName=excluded.modelName, baseUrl=excluded.baseUrl, displayName=excluded.displayName',
+      [record.provider, record.customKey, record.useDefault, record.modelName, record.baseUrl, displayName]
     );
   }
 
