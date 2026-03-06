@@ -37,7 +37,6 @@ const openAIPresetUrls = [
 const BASE_PROVIDERS = [
   { id: 'chatgpt', name: 'OpenAI API', placeholder: 'Enter your OpenAI API key', url: 'https://platform.openai.com/api-keys' },
   { id: 'gemini', name: 'Gemini API', placeholder: 'Enter your Gemini API key', url: 'https://ai.google.dev/' },
-  { id: 'deepseek', name: 'DeepSeek API', placeholder: 'Enter your DeepSeek API key', url: 'https://platform.deepseek.com' },
   { id: 'claude', name: 'Claude API', placeholder: 'Enter your Claude API key', url: 'https://www.anthropic.com' },
 ];
 
@@ -560,7 +559,6 @@ const getModelIcon = (id: string): string => {
     case 'gemini': return 'cube';
     case 'chatgpt': return 'cube';
     case 'claude': return 'cube';
-    case 'deepseek': return 'cube';
     default: return 'key';
   }
 };

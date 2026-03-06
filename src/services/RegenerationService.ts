@@ -18,7 +18,7 @@ interface RegenerationCallbacks {
   saveMessagesImmediate: (messages: ChatMessage[]) => Promise<void>;
   saveMessages: (messages: ChatMessage[]) => void;
   saveMessagesDebounced: { cancel: () => void };
-  handleApiError: (error: unknown, provider: 'Gemini' | 'OpenAI' | 'DeepSeek' | 'Claude') => void;
+  handleApiError: (error: unknown, provider: 'Gemini' | 'OpenAI' | 'Claude') => void;
 }
 
 export class RegenerationService {
@@ -114,7 +114,7 @@ export class RegenerationService {
     let firstTokenTime: number | null = null;
     
     try {
-      const isOnlineModel = !!validProvider && ['gemini','chatgpt','deepseek','claude'].includes(OnlineModelService.getBaseProvider(validProvider));
+      const isOnlineModel = !!validProvider && ['gemini','chatgpt','claude'].includes(OnlineModelService.getBaseProvider(validProvider));
       const isAppleFoundation = validProvider === 'apple-foundation';
 
       if (isOnlineModel) {
@@ -513,11 +513,10 @@ export class RegenerationService {
     }
   }
 
-  private getProviderDisplayName(provider: string): 'Gemini' | 'OpenAI' | 'DeepSeek' | 'Claude' {
+  private getProviderDisplayName(provider: string): 'Gemini' | 'OpenAI' | 'Claude' {
     switch (provider) {
       case 'gemini': return 'Gemini';
       case 'chatgpt': return 'OpenAI';
-      case 'deepseek': return 'DeepSeek';
       case 'claude': return 'Claude';
       default: return 'OpenAI';
     }

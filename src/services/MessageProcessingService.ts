@@ -20,7 +20,7 @@ export interface MessageProcessingCallbacks {
   saveMessages: (messages: ChatMessage[]) => void;
   saveMessagesDebounced: { cancel: () => void };
   updateMessageContentDebounced: (messageId: string, content: string, thinking: string, stats: any) => void;
-  handleApiError: (error: unknown, provider: 'Gemini' | 'OpenAI' | 'DeepSeek' | 'Claude') => void;
+  handleApiError: (error: unknown, provider: 'Gemini' | 'OpenAI' | 'Claude') => void;
 }
 
 export class MessageProcessingService {
@@ -43,7 +43,7 @@ export class MessageProcessingService {
       this.callbacks.setIsRegenerating(true);
       
       const currentMessages = currentChat.messages;
-      const isOnlineModel = !!activeProvider && ['gemini','chatgpt','deepseek','claude'].includes(OnlineModelService.getBaseProvider(activeProvider));
+      const isOnlineModel = !!activeProvider && ['gemini','chatgpt','claude'].includes(OnlineModelService.getBaseProvider(activeProvider));
       const isAppleFoundation = activeProvider === 'apple-foundation';
 
       const fallbackSystemPrompt = settings.systemPrompt || 'You are a helpful AI assistant.';
@@ -779,12 +779,11 @@ export class MessageProcessingService {
     }
   }
 
-  private getProviderDisplayName(provider: string): 'Gemini' | 'OpenAI' | 'DeepSeek' | 'Claude' {
+  private getProviderDisplayName(provider: string): 'Gemini' | 'OpenAI' | 'Claude' {
     const base = OnlineModelService.getBaseProvider(provider);
     switch (base) {
       case 'gemini': return 'Gemini';
       case 'chatgpt': return 'OpenAI';
-      case 'deepseek': return 'DeepSeek';
       case 'claude': return 'Claude';
       default: return 'OpenAI';
     }

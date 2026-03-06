@@ -55,7 +55,7 @@ interface StoredModel {
   modified: string;
 }
 
-const remoteProviders: ProviderType[] = ['gemini', 'chatgpt', 'deepseek', 'claude'];
+const remoteProviders: ProviderType[] = ['gemini', 'chatgpt', 'claude'];
 
 const isRemoteProvider = (provider: string | null): boolean => {
   if (!provider) {

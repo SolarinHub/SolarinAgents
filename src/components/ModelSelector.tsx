@@ -120,7 +120,6 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     const [onlineModelStatuses, setOnlineModelStatuses] = useState<{[key: string]: boolean}>({
       gemini: false,
       chatgpt: false,
-      deepseek: false,
       claude: false
     });
     const [cloneModels, setCloneModels] = useState<OnlineModel[]>([]);
@@ -292,7 +291,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
 
     const loadCloneModels = async () => {
       try {
-        const clones = await onlineModelService.listClones();
+        const clones = (await onlineModelService.listClones()).filter(c => ['gemini', 'chatgpt', 'claude'].includes(c.baseProvider));
         const models = clones.map(c => ({
           id: c.id,
           name: c.displayName,
@@ -310,10 +309,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       try {
         const hasGeminiKey = await onlineModelService.hasApiKey('gemini');
         const hasOpenAIKey = await onlineModelService.hasApiKey('chatgpt');
-        const hasDeepSeekKey = await onlineModelService.hasApiKey('deepseek');
         const hasClaudeKey = await onlineModelService.hasApiKey('claude');
 
-        const clones = await onlineModelService.listClones();
+        const clones = (await onlineModelService.listClones()).filter(c => ['gemini', 'chatgpt', 'claude'].includes(c.baseProvider));
         const cloneStatuses: {[key: string]: boolean} = {};
         for (const clone of clones) {
           cloneStatuses[clone.id] = await onlineModelService.hasApiKey(clone.id);
@@ -322,7 +320,6 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         const newStatuses = {
           gemini: hasGeminiKey,
           chatgpt: hasOpenAIKey,
-          deepseek: hasDeepSeekKey,
           claude: hasClaudeKey,
           ...cloneStatuses,
         };
@@ -502,7 +499,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
           }
 
           if (onModelSelect) {
-            onModelSelect(model.id as 'gemini' | 'chatgpt' | 'deepseek' | 'claude');
+            onModelSelect(model.id as ProviderType);
           }
         } else {
           const storedModel = model as StoredModel;

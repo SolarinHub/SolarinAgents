@@ -44,9 +44,6 @@ const ModelSelectorButton: React.FC<ModelSelectorButtonProps> = ({
     } else if (activeProvider === 'chatgpt') {
       modelName = 'ChatGPT';
       iconName = 'robot';
-    } else if (activeProvider === 'deepseek') {
-      modelName = 'DeepSeek';
-      iconName = 'brain';
     } else if (activeProvider === 'claude') {
       modelName = 'Claude';
       iconName = 'account-tie';

@@ -131,7 +131,7 @@ const ModelSettingsCore = ({
                 Enable Remote Models
               </Text>
               <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-                Access cloud-based AI models (Gemini, ChatGPT, Claude, DeepSeek)
+                Access cloud-based AI models (Gemini, ChatGPT, Claude)
               </Text>
             </View>
           </View>

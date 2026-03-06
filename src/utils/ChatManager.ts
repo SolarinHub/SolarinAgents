@@ -882,7 +882,6 @@ class ChatManager {
       } else if (
         this.currentProvider === 'gemini' ||
         this.currentProvider === 'chatgpt' ||
-        this.currentProvider === 'deepseek' ||
         this.currentProvider === 'claude'
       ) {
         const { onlineModelService } = await import('../services/OnlineModelService');
@@ -899,7 +898,7 @@ class ChatManager {
       }
 
       const { onlineModelService } = await import('../services/OnlineModelService');
-      const providers: ('gemini' | 'chatgpt' | 'deepseek' | 'claude')[] = ['gemini', 'chatgpt', 'deepseek', 'claude'];
+      const providers: ('gemini' | 'chatgpt' | 'claude')[] = ['gemini', 'chatgpt', 'claude'];
       for (const provider of providers) {
         const hasApiKey = await onlineModelService.hasApiKey(provider);
         if (hasApiKey) {

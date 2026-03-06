@@ -56,7 +56,7 @@ type HomeScreenProps = {
   route: RouteProp<TabParamList, 'HomeTab'>;
 };
 
-const remoteProviders: ProviderType[] = ['gemini', 'chatgpt', 'deepseek', 'claude'];
+const remoteProviders: ProviderType[] = ['gemini', 'chatgpt', 'claude'];
 
 const isRemoteProvider = (provider: string | null): boolean => {
   if (!provider) {
@@ -486,7 +486,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     }
   }, [isLoading, isRegenerating, isStreaming, activeProvider]);
 
-  const handleApiError = (error: unknown, provider: 'Gemini' | 'OpenAI' | 'DeepSeek' | 'Claude') => {
+  const handleApiError = (error: unknown, provider: 'Gemini' | 'OpenAI' | 'Claude') => {
     
     if (error instanceof Error) {
       if (error.message.startsWith('QUOTA_EXCEEDED:')) {

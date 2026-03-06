@@ -25,7 +25,6 @@ export const getModelNameFromPath = (path: string | null, models: StoredModel[],
   
   if (path === 'gemini') return 'Gemini';
   if (path === 'chatgpt') return 'ChatGPT';
-  if (path === 'deepseek') return 'DeepSeek';
   if (path === 'claude') return 'Claude';
   if (path === 'apple-foundation') return 'Apple Foundation';
 
@@ -33,7 +32,6 @@ export const getModelNameFromPath = (path: string | null, models: StoredModel[],
     const baseProvider = OnlineModelService.getBaseProvider(path);
     if (baseProvider === 'gemini') return 'Gemini Clone';
     if (baseProvider === 'chatgpt') return 'ChatGPT Clone';
-    if (baseProvider === 'deepseek') return 'DeepSeek Clone';
     if (baseProvider === 'claude') return 'Claude Clone';
   }
   
@@ -48,7 +46,7 @@ export const getProjectorNameFromPath = (path: string | null, models: StoredMode
   return model ? getDisplayName(model.name) : getDisplayName(path.split('/').pop() || '');
 };
 
-const remoteProviders = new Set<ProviderType>(['gemini', 'chatgpt', 'deepseek', 'claude']);
+const remoteProviders = new Set<ProviderType>(['gemini', 'chatgpt', 'claude']);
 
 const isRemoteProvider = (provider: string | null): boolean => {
   if (!provider) return false;
