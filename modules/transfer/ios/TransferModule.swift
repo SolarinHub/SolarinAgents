@@ -146,7 +146,7 @@ public class TransferModule: Module {
     let dest = stored?.destination ?? ""
 
     if !dest.isEmpty {
-      let destURL = URL(fileURLWithPath: dest)
+      let destURL = Self.resolveDestinationURL(dest)
       let dir = destURL.deletingLastPathComponent()
       try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
       try? FileManager.default.removeItem(at: destURL)
@@ -164,7 +164,8 @@ public class TransferModule: Module {
       }
     }
 
-    let size = (try? FileManager.default.attributesOfItem(atPath: dest))?[.size] as? Int64 ?? 0
+    let finalPath = dest.isEmpty ? dest : Self.resolveDestinationURL(dest).path
+    let size = (try? FileManager.default.attributesOfItem(atPath: finalPath))?[.size] as? Int64 ?? 0
 
     sendEvent("onTransferComplete", [
       "downloadId": tid,
@@ -266,6 +267,16 @@ public class TransferModule: Module {
     guard let p = path, !p.isEmpty else { return nil }
     let clean = p.hasPrefix("file://") ? String(p.dropFirst(7)) : p
     return clean.split(separator: "/").last.map(String.init)
+  }
+
+  private static func resolveDestinationURL(_ raw: String) -> URL {
+    if let parsed = URL(string: raw), parsed.isFileURL {
+      return parsed
+    }
+    if raw.hasPrefix("file://") {
+      return URL(fileURLWithPath: String(raw.dropFirst(7)))
+    }
+    return URL(fileURLWithPath: raw)
   }
 }
 
