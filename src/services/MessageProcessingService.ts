@@ -55,9 +55,11 @@ export class MessageProcessingService {
         }
       }
 
-      const processedMessages = currentMessages.some(msg => msg.role === 'system')
-        ? currentMessages
-        : [{ role: 'system', content: systemPrompt, id: 'system-prompt' }, ...currentMessages];
+      const processedMessages = isOnlineModel
+        ? [{ role: 'system', content: systemPrompt, id: 'system-prompt' }, ...currentMessages.filter(msg => msg.role !== 'system')]
+        : currentMessages.some(msg => msg.role === 'system')
+          ? currentMessages
+          : [{ role: 'system', content: systemPrompt, id: 'system-prompt' }, ...currentMessages];
       const skipRag = this.shouldSkipRag(processedMessages) || await this.shouldSkipRagForInput(processedMessages);
       
       const assistantMessage: Omit<ChatMessage, 'id'> = {
