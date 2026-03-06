@@ -149,6 +149,7 @@ export default function MainTabNavigator() {
 
   return (
     <Tab.Navigator
+      backBehavior="history"
       tabBar={props => <CustomTabBar {...props} />}
       detachInactiveScreens={false}
       screenOptions={{
