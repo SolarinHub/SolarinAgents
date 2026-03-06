@@ -36,6 +36,7 @@ const InferenceEngineSection: React.FC<InferenceEngineProps> = ({
       icon: 'apple',
       enabled: true,
       requiresMLX: true,
+      experimental: true,
     },
   ], []);
 
@@ -53,19 +54,26 @@ const InferenceEngineSection: React.FC<InferenceEngineProps> = ({
         ]}
       >
         <View style={styles.engineInfo}>
-          <Text
-            style={[
-              styles.engineName,
-              {
-                color: isDisabled
-                  ? (currentTheme === 'dark' ? '#666' : themeColors.secondaryText)
-                  : (currentTheme === 'dark' ? '#fff' : themeColors.text),
-                fontWeight: '500',
-              },
-            ]}
-          >
-            {engine.name}
-          </Text>
+          <View style={styles.engineHeader}>
+            <Text
+              style={[
+                styles.engineName,
+                {
+                  color: isDisabled
+                    ? (currentTheme === 'dark' ? '#666' : themeColors.secondaryText)
+                    : (currentTheme === 'dark' ? '#fff' : themeColors.text),
+                  fontWeight: '500',
+                },
+              ]}
+            >
+              {engine.name}
+            </Text>
+            {engine.experimental && (
+              <View style={[styles.tag, { backgroundColor: themeColors.primary + '20' }]}>
+                <Text style={[styles.tagText, { color: themeColors.primary }]}>Experimental</Text>
+              </View>
+            )}
+          </View>
           <Text
             style={[
               styles.engineDescription,
@@ -219,10 +227,24 @@ const styles = StyleSheet.create({
   engineInfo: {
     flex: 1,
   },
+  engineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
   engineName: {
     fontSize: 16,
     fontWeight: '500',
-    marginBottom: 4,
+  },
+  tag: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  tagText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   engineDescription: {
     fontSize: 14,
