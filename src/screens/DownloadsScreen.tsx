@@ -16,7 +16,7 @@ import { modelDownloader } from '../services/ModelDownloader';
 import { useDownloads } from '../context/DownloadContext';
 import AppHeader from '../components/AppHeader';
 import { getThemeAwareColor } from '../utils/ColorUtils';
-import { Portal, Text, Button } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import Dialog from '../components/Dialog';
 
 const formatBytes = (bytes: number) => {
@@ -70,7 +70,10 @@ export default function DownloadsScreen() {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
-  const [dialogActions, setDialogActions] = useState<React.ReactNode[]>([]);
+  const [dialogPrimaryText, setDialogPrimaryText] = useState<string | undefined>(undefined);
+  const [dialogPrimaryPress, setDialogPrimaryPress] = useState<(() => void) | undefined>(undefined);
+  const [dialogSecondaryText, setDialogSecondaryText] = useState<string | undefined>(undefined);
+  const [dialogSecondaryPress, setDialogSecondaryPress] = useState<(() => void) | undefined>(undefined);
   const [cancelDialogVisible, setCancelDialogVisible] = useState(false);
   const [cancelModelName, setCancelModelName] = useState('');
   const [mlxPackageFiles, setMlxPackageFiles] = useState<Record<string, string[]>>({});
@@ -83,10 +86,16 @@ export default function DownloadsScreen() {
     setCancelModelName('');
   };
 
-  const showDialog = (title: string, message: string, actions: React.ReactNode[]) => {
+  interface BtnCfg { label: string; onPress: () => void }
+
+  const showDialog = (title: string, message: string, primary?: BtnCfg, secondary?: BtnCfg) => {
     setDialogTitle(title);
     setDialogMessage(message);
-    setDialogActions(actions);
+    const autoClose = () => setDialogVisible(false);
+    setDialogPrimaryText(primary?.label ?? 'OK');
+    setDialogPrimaryPress(() => primary ? primary.onPress : autoClose);
+    setDialogSecondaryText(secondary?.label);
+    setDialogSecondaryPress(secondary ? () => secondary.onPress : undefined);
     setDialogVisible(true);
   };
 
@@ -215,9 +224,7 @@ export default function DownloadsScreen() {
         return newProgress;
       });
     } catch {
-      showDialog('Error', 'Failed to cancel download', [
-        <Button key="ok" onPress={hideDialog}>OK</Button>
-      ]);
+      showDialog('Error', 'Failed to cancel download');
     } finally {
       buttonProcessingRef.current.delete(modelName);
     }
@@ -255,19 +262,15 @@ export default function DownloadsScreen() {
           return next;
         });
       } catch {
-        showDialog('Error', 'Failed to cancel all downloads', [
-          <Button key="ok" onPress={hideDialog}>OK</Button>
-        ]);
+        showDialog('Error', 'Failed to cancel all downloads');
       }
     };
 
     showDialog(
       'Cancel All Downloads',
       `Are you sure you want to cancel ${activeNames.length} active downloads?`,
-      [
-        <Button key="cancel" onPress={hideDialog}>No</Button>,
-        <Button key="confirm" onPress={confirmCancelAll}>Yes</Button>
-      ]
+      { label: 'Yes', onPress: confirmCancelAll },
+      { label: 'No', onPress: hideDialog }
     );
   };
 
@@ -373,17 +376,16 @@ export default function DownloadsScreen() {
         />
       </View>
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-          <Dialog.Title>{dialogTitle}</Dialog.Title>
-          <Dialog.Content>
-            <Text>{dialogMessage}</Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            {dialogActions}
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <Dialog
+        visible={dialogVisible}
+        onDismiss={hideDialog}
+        title={dialogTitle}
+        description={dialogMessage}
+        primaryButtonText={dialogPrimaryText}
+        onPrimaryPress={dialogPrimaryPress}
+        secondaryButtonText={dialogSecondaryText}
+        onSecondaryPress={dialogSecondaryPress}
+      />
 
       <Dialog
         visible={cancelDialogVisible}
