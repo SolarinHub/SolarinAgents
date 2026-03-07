@@ -20,7 +20,7 @@ import { getThemeAwareColor } from '../../utils/ColorUtils';
 import FileViewerModal from '../FileViewerModal';
 import CameraOverlay from '../CameraOverlay';
 import { llamaManager } from '../../utils/LlamaManager';
-import { Portal, Text, Button } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import Dialog from '../Dialog';
 import { modelDownloader } from '../../services/ModelDownloader';
 import { engineService } from '../../services/inference-engine-service';
@@ -1108,26 +1108,21 @@ export default function ChatInput({
         ragToggleDisabled={ragToggleDisabled}
       />
 
-      <Portal>
-        <Dialog visible={dialogVisible} onDismiss={hideDialog}>
-          <Dialog.Title style={{ color: isDark ? '#ffffff' : '#000000' }}>
-            {dialogTitle}
-          </Dialog.Title>
-          <Dialog.Content>
-            <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
-              {dialogMessage}
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-                         <Button onPress={hideDialog} textColor={getThemeAwareColor('#4a0660', currentTheme)}>
-               OK
-             </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+<Dialog
+        visible={dialogVisible}
+        onDismiss={hideDialog}
+        title={dialogTitle}
+        description={dialogMessage}
+        buttonText="OK"
+        onClose={hideDialog}
+      />
 
-      <Portal>
-        <Dialog visible={mmProjSelectorVisible} onDismiss={handleMmProjSelectorClose}>
+      <Dialog visible={mmProjSelectorVisible} onDismiss={handleMmProjSelectorClose}
+        primaryButtonText="Skip"
+        onPrimaryPress={handleMmProjSkip}
+        secondaryButtonText="Cancel"
+        onSecondaryPress={handleMmProjSelectorClose}
+      >
           <Dialog.Title style={{ color: isDark ? '#ffffff' : '#000000' }}>
             Select Multimodal Projector
           </Dialog.Title>
@@ -1189,22 +1184,7 @@ export default function ChatInput({
               ))
             )}
           </Dialog.Content>
-          <Dialog.Actions>
-            <Button 
-              onPress={handleMmProjSkip}
-              textColor={getThemeAwareColor('#4a0660', currentTheme)}
-            >
-              Skip
-            </Button>
-            <Button 
-              onPress={handleMmProjSelectorClose}
-              textColor={getThemeAwareColor('#4a0660', currentTheme)}
-            >
-              Cancel
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      </Dialog>
 
       <AITermsDialog
         visible={showAITermsDialog}

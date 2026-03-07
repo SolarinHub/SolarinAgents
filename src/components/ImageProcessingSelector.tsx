@@ -7,7 +7,7 @@ import {
   Switch,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Text, Button, Portal } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import Dialog from './Dialog';
 import { useTheme } from '../context/ThemeContext';
 import { useModel } from '../context/ModelContext';
@@ -326,8 +326,13 @@ export default function ImageProcessingSelector({
         </View>
       )}
 
-      <Portal>
-        <Dialog visible={mmProjSelectorVisible} onDismiss={handleProjectorSelectorClose}>
+      <Dialog visible={mmProjSelectorVisible} onDismiss={handleProjectorSelectorClose}
+        primaryButtonText="Skip"
+        onPrimaryPress={handleProjectorSkip}
+        primaryButtonDisabled={isLoadingProjector}
+        secondaryButtonText="Cancel"
+        onSecondaryPress={handleProjectorSelectorClose}
+      >
           <Dialog.Title style={{ color: isDark ? '#ffffff' : '#000000' }}>
             Select Multimodal Projector
           </Dialog.Title>
@@ -397,24 +402,7 @@ export default function ImageProcessingSelector({
               ))
             )}
           </Dialog.Content>
-          <Dialog.Actions>
-            <Button 
-              onPress={handleProjectorSkip}
-              textColor={getThemeAwareColor('#4a0660', currentTheme)}
-              disabled={isLoadingProjector}
-            >
-              Skip
-            </Button>
-            <Button 
-              onPress={handleProjectorSelectorClose}
-              textColor={getThemeAwareColor('#4a0660', currentTheme)}
-              disabled={isLoadingProjector}
-            >
-              Cancel
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      </Dialog>
     </View>
   );
 }
