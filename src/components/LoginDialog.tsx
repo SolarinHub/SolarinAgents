@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity } from 'react-native';
-import { Portal, Button, Text } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import Dialog from './Dialog';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -35,12 +35,17 @@ export default function LoginDialog({
   };
 
   return (
-    <Portal>
-      <Dialog
-        visible={visible}
-        onDismiss={onDismiss}
-        style={{ backgroundColor: themeColors.background }}
-      >
+    <Dialog
+      visible={visible}
+      onDismiss={onDismiss}
+      style={{ backgroundColor: themeColors.background }}
+      primaryButtonText="Login"
+      onPrimaryPress={handleLogin}
+      primaryButtonLoading={isLoading}
+      primaryButtonDisabled={isLoading || !email || !password}
+      secondaryButtonText="Cancel"
+      onSecondaryPress={onDismiss}
+    >
         <Dialog.Title style={{ color: themeColors.text }}>Login</Dialog.Title>
         <Dialog.Content>
           <Text style={[styles.subtitle, { color: themeColors.secondaryText }]}>
@@ -95,19 +100,7 @@ export default function LoginDialog({
             </Text>
           </TouchableOpacity>
         </Dialog.Content>
-        <Dialog.Actions>
-          <Button onPress={onDismiss} textColor={themeColors.secondaryText}>Cancel</Button>
-          <Button 
-            onPress={handleLogin} 
-            loading={isLoading}
-            disabled={isLoading || !email || !password}
-            textColor={themeColors.primary}
-          >
-            Login
-          </Button>
-        </Dialog.Actions>
-      </Dialog>
-    </Portal>
+    </Dialog>
   );
 }
 
