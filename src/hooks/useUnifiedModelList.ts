@@ -7,7 +7,7 @@ import { modelDownloader } from '../services/ModelDownloader';
 import { DownloadableModel } from '../components/model/DownloadableModelItem';
 import { ModelFormat } from '../types/models';
 import { ModelManager } from 'react-native-nitro-mlx';
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from '../services/fs';
 
 export const useUnifiedModelList = (
   storedModels: any[],

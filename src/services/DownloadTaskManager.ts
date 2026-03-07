@@ -3,7 +3,7 @@ import {backgroundDownloadService} from './downloads/DownloadManager';
 import {DownloadProgressEvent, DownloadTaskInfo, StoredModel} from './ModelDownloaderTypes';
 import {FileManager} from './FileManager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from './fs';
 import {hasEnoughSpace} from '../utils/storageUtils';
 import { mlxStorageManager } from './MLXStorageManager';
 import { ModelFormat } from '../types/models';

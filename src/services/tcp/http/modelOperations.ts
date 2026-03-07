@@ -2,7 +2,7 @@ import { modelDownloader } from '../../ModelDownloader';
 import { logger } from '../../../utils/logger';
 import type { StoredModel } from '../../ModelDownloaderTypes';
 import { parseJsonBody } from './jsonParser';
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from '../../fs';
 
 export async function handleCopyRequest(
   body: string,

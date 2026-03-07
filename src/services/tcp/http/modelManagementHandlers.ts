@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from '../../fs';
 import { engineService } from '../../inference-engine-service';
 import { modelDownloader } from '../../ModelDownloader';
 import type { StoredModel } from '../../ModelDownloaderTypes';

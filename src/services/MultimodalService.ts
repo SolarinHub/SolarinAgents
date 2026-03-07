@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { type LlamaContext } from 'llama.rn';
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from './fs';
 import { 
   ProcessedMessage, 
   MultimodalContent, 

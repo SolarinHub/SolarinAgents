@@ -1,6 +1,6 @@
 import TcpSocket from 'react-native-tcp-socket';
 import * as Network from 'expo-network';
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from './fs';
 import Constants from 'expo-constants';
 import { loadLlamaModelInfo } from 'llama.rn';
 import { Buffer } from 'buffer';

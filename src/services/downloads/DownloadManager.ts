@@ -1,5 +1,5 @@
 import { requireNativeModule, EventEmitter as ExpoEventEmitter } from 'expo-modules-core';
-import * as FileSystem from 'expo-file-system';
+import { fs as FileSystem } from '../fs';
 
 import {
   DownloadEventCallbacks,
