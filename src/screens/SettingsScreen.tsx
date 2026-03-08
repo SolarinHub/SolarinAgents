@@ -481,12 +481,16 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getDirectorySize = async (directory: string): Promise<number> => {
+  const getDirectorySize = async (directory: string, depth = 0): Promise<number> => {
     try {
       const dirInfo = await FileSystem.getInfoAsync(directory);
-      if (!dirInfo.exists) return 0;
+      if (!dirInfo.exists) {
+        console.log('[getDirectorySize] not_exists', directory);
+        return 0;
+      }
 
       const files = await FileSystem.readDirectoryAsync(directory);
+      console.log('[getDirectorySize] scanning', { directory, fileCount: files.length, depth });
       let totalSize = 0;
 
       for (const file of files) {
@@ -497,14 +501,16 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         }
 
         if ((fileInfo as any).isDirectory) {
-          totalSize += await getDirectorySize(filePath);
+          totalSize += await getDirectorySize(filePath, depth + 1);
         } else {
           totalSize += (fileInfo as any).size || 0;
         }
       }
 
+      console.log('[getDirectorySize] done', { directory, totalSize, depth });
       return totalSize;
     } catch (error) {
+      console.log('[getDirectorySize] error', { directory, error });
       return 0;
     }
   };
@@ -574,13 +580,16 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     const modelsDir = `${FileSystem.documentDirectory}models`;
     const hfDir = `${FileSystem.documentDirectory}huggingface`;
 
+    console.log('[clearAllModels] start', { modelsDir, hfDir });
     showDialog('', '', undefined, undefined, true);
 
     try {
+      console.log('[clearAllModels] calculating_sizes');
       const [modelsSize, hfSize] = await Promise.all([
         getDirectorySize(modelsDir),
         getDirectorySize(hfDir),
       ]);
+      console.log('[clearAllModels] sizes_calculated', { modelsSize, hfSize });
       const totalSize = modelsSize + hfSize;
       const totalSizeText = formatBytes(totalSize);
 
@@ -592,12 +601,17 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           onPress: async () => {
             hideDialog();
             try {
+              console.log('[clearAllModels] deleting');
               setClearingType('models');
               await modelDownloader.clearAllModels();
+              console.log('[clearAllModels] models_cleared');
               await modelSettingsService.clearAllSettings();
+              console.log('[clearAllModels] settings_cleared');
               await loadStorageInfo();
+              console.log('[clearAllModels] storage_info_reloaded');
               showDialog('Success', 'All models cleared successfully');
             } catch (error) {
+              console.log('[clearAllModels] delete_error', error);
               showDialog('Error', 'Failed to clear models');
             } finally {
               setClearingType(null);
@@ -607,6 +621,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         { label: 'Cancel', onPress: hideDialog }
       );
     } catch (error) {
+      console.log('[clearAllModels] size_calc_error', error);
       showDialog('Error', 'Failed to clear models');
     }
   };
@@ -872,7 +887,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         visible={showAppleFoundationDialog}
         onDismiss={() => setShowAppleFoundationDialog(false)}
         title="Apple Intelligence"
-        description="Apple Intelligence not supported on this device."
+        description="Apple Intelligence not enabled on this device."
         buttonText="OK"
         onClose={() => setShowAppleFoundationDialog(false)}
       />

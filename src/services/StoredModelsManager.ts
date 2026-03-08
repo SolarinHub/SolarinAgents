@@ -505,7 +505,9 @@ export class StoredModelsManager extends EventEmitter {
 
   async clearAllModels(): Promise<void> {
     try {
+      console.log('[StoredModelsManager] clearAllModels_start');
       const models = await this.getStoredModels();
+      console.log('[StoredModelsManager] models_found', models.length);
 
       /*
         Unregister each MLX model from the nitro registry
@@ -514,7 +516,9 @@ export class StoredModelsManager extends EventEmitter {
       for (const m of models) {
         if (m.modelFormat === ModelFormat.MLX) {
           try {
+            console.log('[StoredModelsManager] mlx_delete_start', m.name);
             await ModelManager.deleteModel(m.name);
+            console.log('[StoredModelsManager] mlx_delete_done', m.name);
           } catch {
             console.log('mlx_registry_delete_skip', m.name);
           }
@@ -538,18 +542,23 @@ export class StoredModelsManager extends EventEmitter {
 
       for (const dir of dirsToRemove) {
         try {
+          console.log('[StoredModelsManager] dir_delete_start', dir);
           const info = await FileSystem.getInfoAsync(dir);
           if (info.exists) {
             await FileSystem.deleteAsync(dir, { idempotent: true });
             console.log('dir_deleted', dir);
+          } else {
+            console.log('[StoredModelsManager] dir_not_found', dir);
           }
-        } catch {
-          console.log('dir_delete_skip', dir);
+        } catch (err) {
+          console.log('dir_delete_skip', dir, err);
         }
       }
 
+      console.log('[StoredModelsManager] recreating_base_dir');
       await FileSystem.makeDirectoryAsync(baseDir, { intermediates: true });
 
+      console.log('[StoredModelsManager] saving_empty_list');
       await this.saveModelsToStorage([]);
       this.emit('modelsChanged');
       console.log('all_models_cleared');
