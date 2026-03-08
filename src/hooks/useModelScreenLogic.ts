@@ -14,6 +14,7 @@ import { modelSettingsService } from '../services/ModelSettingsService';
 import { getUserFromSecureStorage, logoutUser } from '../services/FirebaseService';
 import { getActiveDownloadsCount } from '../utils/ModelUtils';
 import { StoredModel } from '../services/ModelDownloaderTypes';
+import { ShowDialogFn } from './useDialog';
 
 const BACKGROUND_DOWNLOAD_TASK = 'background-download-task';
 const isAndroid = Platform.OS === 'android';
@@ -80,7 +81,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     }
   };
 
-  const handleLogout = async (showDialog: (title: string, message: string, actions: any[]) => void, hideDialog: () => void) => {
+  const handleLogout = async (showDialog: ShowDialogFn, hideDialog: () => void) => {
     try {
       const result = await logoutUser();
       await AsyncStorage.removeItem('user');
@@ -92,12 +93,12 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       }
       
       if (result.success) {
-        showDialog('Logged Out', 'You have been successfully logged out.', []);
+        showDialog('Logged Out', 'You have been successfully logged out.');
       } else {
-        showDialog('Logout Issue', result.error || 'There was an issue logging out. Please try again.', []);
+        showDialog('Logout Issue', result.error || 'There was an issue logging out. Please try again.');
       }
     } catch (error) {
-      showDialog('Error', 'Failed to log out. Please try again.', []);
+      showDialog('Error', 'Failed to log out. Please try again.');
     }
   };
 
@@ -125,7 +126,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     }
   };
 
-  const proceedWithModelImport = async (showDialog: (title: string, message: string, actions: any[]) => void) => {
+  const proceedWithModelImport = async (showDialog: ShowDialogFn) => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
@@ -142,7 +143,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       const isSafe = fileName.endsWith('.safetensors');
 
       if (!isGguf && !isSafe) {
-        showDialog('Invalid File', 'Please select a GGUF or safetensors model file', []);
+        showDialog('Invalid File', 'Please select a GGUF or safetensors model file');
         return;
       }
 
@@ -153,16 +154,16 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
         await modelDownloader.linkExternalModel(file.uri, file.name);
         setIsLoading(false);
         setImportingModelName(null);
-        showDialog('Model Imported', 'The model has been successfully imported to the app.', []);
+        showDialog('Model Imported', 'The model has been successfully imported to the app.');
         await refreshStoredModels();
       } catch (error) {
         setIsLoading(false);
         setImportingModelName(null);
-        showDialog('Error', `Failed to import the model: ${error instanceof Error ? error.message : 'Unknown error'}`, []);
+        showDialog('Error', `Failed to import the model: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } catch (error) {
       setIsLoading(false);
-      showDialog('Error', 'Could not open the file picker. Please ensure the app has storage permissions.', []);
+      showDialog('Error', 'Could not open the file picker. Please ensure the app has storage permissions.');
     }
   };
 
@@ -181,7 +182,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     }));
   };
 
-  const cancelDownload = async (modelName: string, showDialog: (title: string, message: string, actions: any[]) => void) => {
+  const cancelDownload = async (modelName: string, showDialog: ShowDialogFn) => {
     try {
       const downloadInfo = downloadProgress[modelName];
       if (!downloadInfo) {
@@ -198,19 +199,18 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
 
       await refreshStoredModels();
     } catch (error) {
-      showDialog('Error', 'Failed to cancel download', []);
+      showDialog('Error', 'Failed to cancel download');
     }
   };
 
-  const handleDelete = async (model: StoredModel, showDialog: (title: string, message: string, actions: any[]) => void, hideDialog: () => void) => {
+  const handleDelete = async (model: StoredModel, showDialog: ShowDialogFn, hideDialog: () => void) => {
     showDialog(
       'Delete Model',
-      `Are you sure you want to delete ${model.name}?`,
-      []
+      `Are you sure you want to delete ${model.name}?`
     );
   };
 
-  const confirmDelete = async (model: StoredModel, showDialog: (title: string, message: string, actions: any[]) => void) => {
+  const confirmDelete = async (model: StoredModel, showDialog: ShowDialogFn) => {
     try {
       const modelWithFiles = model as StoredModel & { mlxFiles?: StoredModel[] };
       
@@ -226,11 +226,11 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       
       await refreshStoredModels();
     } catch (error) {
-      showDialog('Error', 'Failed to delete model', []);
+      showDialog('Error', 'Failed to delete model');
     }
   };
 
-  const handleExport = async (modelPath: string, modelName: string, showDialog: (title: string, message: string, actions: any[]) => void) => {
+  const handleExport = async (modelPath: string, modelName: string, showDialog: ShowDialogFn) => {
     try {
       setIsLoading(true);
       setIsExporting(true);
@@ -240,7 +240,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     } catch (error) {
       setIsLoading(false);
       setIsExporting(false);
-      showDialog('Share Failed', `Failed to share ${modelName}: ${error instanceof Error ? error.message : 'Unknown error'}`, []);
+      showDialog('Share Failed', `Failed to share ${modelName}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -248,13 +248,12 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     navigation.navigate('ModelSettings', { modelName, modelPath });
   };
 
-  const handleTabPress = (tab: 'stored' | 'downloadable' | 'remote', showDialog: (title: string, message: string, actions: any[]) => void, hideDialog: () => void) => {
+  const handleTabPress = (tab: 'stored' | 'downloadable' | 'remote', showDialog: ShowDialogFn, hideDialog: () => void) => {
     if (tab === 'remote') {
       if (!isLoggedIn || !enableRemoteModels) {
         showDialog(
           'Remote Models Disabled',
-          'Remote models require the "Enable Remote Models" setting to be turned on and you need to be signed in. Would you like to go to Settings to configure this?',
-          []
+          'Remote models require the "Enable Remote Models" setting to be turned on and you need to be signed in. Would you like to go to Settings to configure this?'
         );
         return;
       }

@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   Modal,
   StyleSheet,
   StyleProp,
@@ -30,6 +31,8 @@ interface DialogProps {
   primaryButtonText?: string;
   primaryButtonColor?: string;
   primaryButtonTextColor?: string;
+  primaryButtonLoading?: boolean;
+  primaryButtonDisabled?: boolean;
   onPrimaryPress?: () => void;
   secondaryButtonText?: string;
   secondaryButtonColor?: string;
@@ -71,12 +74,14 @@ const AppDialog = (({
   points = [],
   iconName,
   iconColor,
-  buttonText = 'OK',
+  buttonText,
   buttonColor,
   buttonTextColor = '#fff',
   primaryButtonText,
   primaryButtonColor,
   primaryButtonTextColor,
+  primaryButtonLoading = false,
+  primaryButtonDisabled = false,
   onPrimaryPress,
   secondaryButtonText,
   secondaryButtonColor,
@@ -89,6 +94,8 @@ const AppDialog = (({
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
   const hasDualButtons = !!primaryButtonText && !!secondaryButtonText;
+  const hasPrimaryOnly = !!primaryButtonText && !secondaryButtonText;
+  const hasLegacyBtn = !!buttonText && !primaryButtonText;
   const close = onClose || onDismiss;
   const defaultSecondaryBg =
     currentTheme === 'light' ? themeColors.secondaryText : themeColors.cardBackground;
@@ -100,7 +107,8 @@ const AppDialog = (({
     !!description ||
     points.length > 0 ||
     hasDualButtons ||
-    buttonText !== undefined;
+    hasPrimaryOnly ||
+    hasLegacyBtn;
 
   if (!visible) return null;
 
@@ -187,36 +195,53 @@ const AppDialog = (({
                     style={[
                       styles.modalButton,
                       styles.primaryButton,
-                      { backgroundColor: primaryButtonColor || themeColors.primary },
+                      {
+                        backgroundColor: primaryButtonColor || themeColors.primary,
+                        opacity: primaryButtonDisabled ? 0.5 : 1,
+                      },
                     ]}
                     onPress={onPrimaryPress || close}
+                    disabled={primaryButtonDisabled || primaryButtonLoading}
                   >
-                    <Text
-                      style={[
-                        styles.modalButtonText,
-                        { color: primaryButtonTextColor || buttonTextColor },
-                      ]}
-                    >
-                      {primaryButtonText}
-                    </Text>
+                    {primaryButtonLoading ? (
+                      <ActivityIndicator size="small" color={primaryButtonTextColor || buttonTextColor} />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.modalButtonText,
+                          { color: primaryButtonTextColor || buttonTextColor },
+                        ]}
+                      >
+                        {primaryButtonText}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
-              ) : (
+              ) : (hasPrimaryOnly || hasLegacyBtn) ? (
                 <View style={styles.dualButtonRow}>
                   <TouchableOpacity
                     style={[
                       styles.modalButton,
                       styles.primaryButton,
-                      { flex: 1, backgroundColor: buttonColor || themeColors.primary },
+                      {
+                        flex: 1,
+                        backgroundColor: (hasPrimaryOnly ? primaryButtonColor : buttonColor) || themeColors.primary,
+                        opacity: primaryButtonDisabled ? 0.5 : 1,
+                      },
                     ]}
-                    onPress={close}
+                    onPress={(hasPrimaryOnly ? onPrimaryPress : undefined) || close}
+                    disabled={primaryButtonDisabled || primaryButtonLoading}
                   >
-                    <Text style={[styles.modalButtonText, { color: buttonTextColor }]}>
-                      {buttonText || 'OK'}
-                    </Text>
+                    {primaryButtonLoading ? (
+                      <ActivityIndicator size="small" color={primaryButtonTextColor || buttonTextColor} />
+                    ) : (
+                      <Text style={[styles.modalButtonText, { color: (hasPrimaryOnly ? primaryButtonTextColor : undefined) || buttonTextColor }]}>
+                        {hasPrimaryOnly ? primaryButtonText : buttonText}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
-              )}
+              ) : null}
             </>
           ) : (
             children
