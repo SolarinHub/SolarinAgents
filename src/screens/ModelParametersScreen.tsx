@@ -185,7 +185,6 @@ export default function ModelParametersScreen({ navigation }: Props) {
           onSettingsChange={handleChange}
           onStopWordsPress={() => setShowStopWords(true)}
           onGrammarDialogOpen={() => {
-            if (!caps.grammar) return;
             setTempGrammar(settings.grammar);
             setShowGrammarDialog(true);
           }}
@@ -213,7 +212,6 @@ export default function ModelParametersScreen({ navigation }: Props) {
           onSettingsChange={handleChange}
           onDialogOpen={handleOpenDialog}
           onDrySequenceBreakersDialogOpen={() => {
-            if (!caps.dry) return;
             setTempDrySeq((settings.drySequenceBreakers || []).join('\n'));
             setShowDrySeqDialog(true);
           }}

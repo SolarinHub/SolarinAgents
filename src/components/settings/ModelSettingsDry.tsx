@@ -59,7 +59,7 @@ const ModelSettingsDry = ({
         maximumValue={5}
         step={0.1}
         description="Strength of DRY feature. Higher values strongly prevent repetition. 0 disables DRY."
-        disabled={!caps.dry}
+        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryMultiplier',
           label: 'DRY Multiplier',
@@ -80,7 +80,7 @@ const ModelSettingsDry = ({
         maximumValue={4}
         step={0.05}
         description="Base penalty for repetition in DRY mode. Higher values are more aggressive."
-        disabled={!caps.dry}
+        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryBase',
           label: 'DRY Base',
@@ -101,7 +101,7 @@ const ModelSettingsDry = ({
         maximumValue={20}
         step={1}
         description="How many words can repeat before DRY penalty kicks in."
-        disabled={!caps.dry}
+        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryAllowedLength',
           label: 'DRY Allowed Length',
@@ -122,7 +122,7 @@ const ModelSettingsDry = ({
         maximumValue={512}
         step={1}
         description="How far back to look for repetition in DRY mode. -1 uses context size."
-        disabled={!caps.dry}
+        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryPenaltyLastN',
           label: 'DRY Penalty Last N',
@@ -135,8 +135,7 @@ const ModelSettingsDry = ({
       />
 
       <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder, !caps.dry && styles.disabledSettingItem]}
-        disabled={!caps.dry}
+        style={[styles.settingItem, styles.settingItemBorder]}
         onPress={onDrySequenceBreakersDialogOpen}
       >
         <View style={styles.settingLeft}>
@@ -155,6 +154,9 @@ const ModelSettingsDry = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Symbols that reset the repetition checker in DRY mode.
             </Text>
+            {!caps.dry && (
+              <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
+            )}
             {isArrayDifferent(modelSettings.drySequenceBreakers, defaultSettings.drySequenceBreakers) && (
               <TouchableOpacity
                 onPress={() => onSettingsChange({ drySequenceBreakers: defaultSettings.drySequenceBreakers || [] })}
@@ -242,8 +244,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  disabledSettingItem: {
-    opacity: 0.5,
+  unsupportedText: {
+    fontSize: 11,
+    color: '#FF9500',
+    fontWeight: '500',
+    marginTop: 4,
   },
 });
 

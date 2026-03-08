@@ -90,7 +90,7 @@ const ModelSettingsControls = ({
         <Text style={[styles.sectionTitle, { color: themeColors.secondaryText }]}>CORE SETTINGS</Text>
       </View>
 
-      <View style={[styles.settingItem, styles.settingItemBorder, !caps.jinja && styles.disabledSettingItem]}>
+      <View style={[styles.settingItem, styles.settingItemBorder]}>
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
             <MaterialCommunityIcons name="code-braces" size={22} color={iconColor} />
@@ -119,15 +119,13 @@ const ModelSettingsControls = ({
         <Switch
           value={modelSettings.jinja}
           onValueChange={(value) => onSettingsChange({ jinja: value })}
-          disabled={!caps.jinja}
           trackColor={{ false: themeColors.borderColor, true: themeColors.primary + '80' }}
           thumbColor={modelSettings.jinja ? themeColors.primary : themeColors.background}
         />
       </View>
 
       <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder, !caps.grammar && styles.disabledSettingItem]}
-        disabled={!caps.grammar}
+        style={[styles.settingItem, styles.settingItemBorder]}
         onPress={onGrammarDialogOpen}
       >
         <View style={styles.settingLeft}>
@@ -272,9 +270,6 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontWeight: '500',
     marginTop: 4,
-  },
-  disabledSettingItem: {
-    opacity: 0.5,
   },
 });
 

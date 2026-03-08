@@ -42,9 +42,8 @@ const ModelSettingsAdvanced = ({
       </View>
 
       <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder, isMlx && styles.disabledItem]}
-        onPress={isMlx ? undefined : onNProbsDialogOpen}
-        disabled={isMlx}
+        style={[styles.settingItem, styles.settingItemBorder]}
+        onPress={onNProbsDialogOpen}
       >
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
@@ -80,9 +79,8 @@ const ModelSettingsAdvanced = ({
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder, isMlx && styles.disabledItem]}
-        onPress={isMlx ? undefined : onSeedDialogOpen}
-        disabled={isMlx}
+        style={[styles.settingItem, styles.settingItemBorder]}
+        onPress={onSeedDialogOpen}
       >
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
@@ -153,9 +151,8 @@ const ModelSettingsAdvanced = ({
       </View>
 
       <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder, isMlx && styles.disabledItem]}
-        onPress={isMlx ? undefined : onLogitBiasDialogOpen}
-        disabled={isMlx}
+        style={[styles.settingItem, styles.settingItemBorder]}
+        onPress={onLogitBiasDialogOpen}
       >
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
@@ -268,9 +265,6 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontWeight: '500',
     marginTop: 4,
-  },
-  disabledItem: {
-    opacity: 0.5,
   },
 });
 

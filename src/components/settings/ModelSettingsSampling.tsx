@@ -180,7 +180,7 @@ const ModelSettingsSampling = ({
         maximumValue={1}
         step={0.01}
         description="Chance for token removal via XTC sampler. 0 disables XTC sampling."
-        disabled={!caps.xtc}
+        warningText={!caps.xtc ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'xtcProbability',
           label: 'XTC Probability',
@@ -201,7 +201,7 @@ const ModelSettingsSampling = ({
         maximumValue={1}
         step={0.01}
         description="Minimum probability threshold for XTC removal. Values > 0.5 disable XTC."
-        disabled={!caps.xtc}
+        warningText={!caps.xtc ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'xtcThreshold',
           label: 'XTC Threshold',

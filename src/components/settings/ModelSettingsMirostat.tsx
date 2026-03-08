@@ -46,7 +46,7 @@ const ModelSettingsMirostat = ({
         maximumValue={2}
         step={1}
         description="Enable advanced creativity control. 0=disabled, 1=Mirostat, 2=Mirostat 2.0 (smoother)."
-        disabled={!caps.mirostat}
+        warningText={!caps.mirostat ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'mirostat',
           label: 'Mirostat Mode',
@@ -67,7 +67,7 @@ const ModelSettingsMirostat = ({
         maximumValue={10}
         step={0.1}
         description="Target creativity level for Mirostat. Higher values allow more diverse responses."
-        disabled={!caps.mirostat}
+        warningText={!caps.mirostat ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'mirostatTau',
           label: 'Mirostat Tau',
@@ -88,7 +88,7 @@ const ModelSettingsMirostat = ({
         maximumValue={1}
         step={0.01}
         description="How quickly Mirostat adjusts creativity. Higher values mean faster adjustments."
-        disabled={!caps.mirostat}
+        warningText={!caps.mirostat ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'mirostatEta',
           label: 'Mirostat Eta',
