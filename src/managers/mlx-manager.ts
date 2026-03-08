@@ -161,6 +161,10 @@ class MlxManager implements InferenceManager {
         throw new Error('mlx_model_not_downloaded');
       }
 
+      if (this.state.loaded) {
+        await this.release();
+      }
+
       let loadedId = '';
       let lastError: unknown;
 
