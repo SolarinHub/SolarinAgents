@@ -17,7 +17,7 @@ private struct TransferMeta: Codable {
 }
 
 public class TransferModule: Module {
-  private static let sessionId = "com.inferra.bgdownload"
+  static let sessionId = "com.inferra.bgdownload"
   private static let storeKey = "transfer_module_meta"
 
   private lazy var session: URLSession = {
