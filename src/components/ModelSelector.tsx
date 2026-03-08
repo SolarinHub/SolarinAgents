@@ -486,7 +486,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
           }
 
           if (!onlineModelStatuses[model.id]) {
-            handleApiKeyRequired(model);
+            setTimeout(() => {
+              handleApiKeyRequired(model);
+            }, 300);
             return;
           }
 
