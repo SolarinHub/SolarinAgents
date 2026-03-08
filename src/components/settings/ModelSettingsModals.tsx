@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, ScrollView } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, ScrollView, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
@@ -69,6 +69,9 @@ const ModelSettingsModals = ({
 }: ModelSettingsModalsProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
+  const { width, height } = useWindowDimensions();
+  const modalWidth = Math.min(width - 48, 560);
+  const sheetMaxHeight = height * 0.8;
 
   return (
     <>
@@ -79,7 +82,7 @@ const ModelSettingsModals = ({
         onRequestClose={() => setShowGrammarDialog(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background, width: modalWidth, maxHeight: sheetMaxHeight }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>Grammar Rules</Text>
               <TouchableOpacity onPress={() => setShowGrammarDialog(false)} style={styles.closeButton}>
@@ -139,7 +142,7 @@ const ModelSettingsModals = ({
         onRequestClose={() => setShowSeedDialog(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background, width: modalWidth, maxHeight: sheetMaxHeight }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>Random Seed</Text>
               <TouchableOpacity onPress={() => setShowSeedDialog(false)} style={styles.closeButton}>
@@ -196,7 +199,7 @@ const ModelSettingsModals = ({
         onRequestClose={() => setShowNProbsDialog(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background, width: modalWidth, maxHeight: sheetMaxHeight }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>Token Probabilities</Text>
               <TouchableOpacity onPress={() => setShowNProbsDialog(false)} style={styles.closeButton}>
@@ -253,7 +256,7 @@ const ModelSettingsModals = ({
         onRequestClose={() => setShowLogitBiasDialog(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background, width: modalWidth, maxHeight: sheetMaxHeight }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>Logit Bias</Text>
               <TouchableOpacity onPress={() => setShowLogitBiasDialog(false)} style={styles.closeButton}>
@@ -323,7 +326,7 @@ const ModelSettingsModals = ({
         onRequestClose={() => setShowDrySequenceBreakersDialog(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+          <View style={[styles.modalContent, { backgroundColor: themeColors.background, width: modalWidth, maxHeight: sheetMaxHeight }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>DRY Sequence Breakers</Text>
               <TouchableOpacity onPress={() => setShowDrySequenceBreakersDialog(false)} style={styles.closeButton}>
@@ -389,12 +392,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   modalContent: {
+    width: '100%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
-    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',

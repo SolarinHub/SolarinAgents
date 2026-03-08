@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, useWindowDimensions } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { theme } from '../constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,6 +23,8 @@ export default function SystemPromptDialog({
 }: SystemPromptDialogProps) {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
+  const { width, height } = useWindowDimensions();
+  const modalWidth = Math.min(width - 48, 560);
   const [currentValue, setCurrentValue] = useState('');
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function SystemPromptDialog({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.modalContent, { backgroundColor: themeColors.background, width: modalWidth, maxHeight: height - 100 }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: themeColors.text }]}>System Prompt</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -114,10 +116,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: Dimensions.get('window').width - 48,
     borderRadius: 16,
     padding: 24,
-    maxHeight: Dimensions.get('window').height - 100,
   },
   header: {
     flexDirection: 'row',
