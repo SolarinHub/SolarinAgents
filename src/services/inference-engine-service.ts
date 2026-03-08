@@ -98,6 +98,9 @@ class EngineService {
       }
       this.activeModelPath = null;
       await this.set(engine);
+    } else if (this.map[engine].ready()) {
+      await this.map[engine].release();
+      this.activeModelPath = null;
     }
 
     await this.map[this.engine].init(modelPath, projectorPath);
