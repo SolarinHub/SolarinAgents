@@ -128,7 +128,6 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    flexDirection: 'row',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,
