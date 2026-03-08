@@ -8,7 +8,7 @@ module.exports = function(api) {
       production: {
         plugins: [
           'react-native-paper/babel',
-          'transform-remove-console'
+          ['transform-remove-console', { exclude: ['warn', 'error'] }]
         ],
       },
     },

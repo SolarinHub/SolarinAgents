@@ -5,13 +5,14 @@ import { useRemoteModel } from '../context/RemoteModelContext';
 import { ChatLifecycleService } from '../services/ChatLifecycleService';
 import { onlineModelService } from '../services/OnlineModelService';
 import type { ProviderType } from '../services/ModelManagementService';
+import type { ShowDialogFn } from './useDialog';
 
 export const useHomeScreenSettings = (
   activeProvider: ProviderType | null,
   enableRemoteModels: boolean,
   isLoggedIn: boolean,
   navigation: any,
-  showDialog: (title: string, message: string, actions: any[]) => void,
+  showDialog: ShowDialogFn,
   hideDialog: () => void
 ) => {
   const [selectedModelPath, setSelectedModelPath] = useState<string | null>(null);
@@ -72,13 +73,15 @@ export const useHomeScreenSettings = (
             ];
           }
 
-          showDialog(title, message, actions);
+          const primary = actions[0] ? { label: actions[0].text, onPress: actions[0].onPress } : undefined;
+          const secondary = actions[1] ? { label: actions[1].text, onPress: actions[1].onPress } : undefined;
+          showDialog(title, message, primary, secondary);
         }
       }
     };
 
     validateProvider();
-  }, [activeProvider, enableRemoteModels, isLoggedIn, navigation, showDialog, hideDialog]);
+  }, [activeProvider, enableRemoteModels, isLoggedIn]);
 
   useEffect(() => {
     const recheckApiKeys = async () => {

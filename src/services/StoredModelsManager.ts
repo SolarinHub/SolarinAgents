@@ -541,15 +541,13 @@ export class StoredModelsManager extends EventEmitter {
           const info = await FileSystem.getInfoAsync(dir);
           if (info.exists) {
             await FileSystem.deleteAsync(dir, { idempotent: true });
-            console.log('dir_deleted', dir);
           }
-        } catch {
-          console.log('dir_delete_skip', dir);
+        } catch (err) {
+          console.log('dir_delete_skip', dir, err);
         }
       }
 
       await FileSystem.makeDirectoryAsync(baseDir, { intermediates: true });
-
       await this.saveModelsToStorage([]);
       this.emit('modelsChanged');
       console.log('all_models_cleared');

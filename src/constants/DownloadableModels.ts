@@ -3,6 +3,16 @@ import { ModelType } from "../types/models";
 
 export const DOWNLOADABLE_MODELS: DownloadableModel[] = [
   {
+    "name": "Qwen3.5 4B Instruct",
+    "description": "Latest Qwen 3.5 instruct model with stronger reasoning and instruction following.",
+    "size": "2.74 GB",
+    "huggingFaceLink": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
+    "licenseLink": "https://www.apache.org/licenses/LICENSE-2.0",
+    "modelFamily": "4 Billion",
+    "quantization": "Q4_K_M",
+    "tags": ["recommended"]
+  },
+  {
     "name": "Ministral 3 3B Instruct",
     "description": "Mistral's compact vision-language model with 256K context, multilingual support, and strong adherence to system prompts.",
     "size": "2.15 GB",
@@ -191,16 +201,6 @@ export const DOWNLOADABLE_MODELS: DownloadableModel[] = [
     "licenseLink": "https://www.apache.org/licenses/LICENSE-2.0",
     "modelFamily": "4 Billion",
     "quantization": "Q5_K_M",
-    "tags": ["recommended"]
-  },
-  {
-    "name": "Qwen3.5 4B Instruct",
-    "description": "Latest Qwen 3.5 instruct model with stronger reasoning and instruction following.",
-    "size": "2.74 GB",
-    "huggingFaceLink": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
-    "licenseLink": "https://www.apache.org/licenses/LICENSE-2.0",
-    "modelFamily": "4 Billion",
-    "quantization": "Q4_K_M",
     "tags": ["recommended"]
   },
   {

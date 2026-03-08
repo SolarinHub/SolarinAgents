@@ -313,55 +313,46 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
   }, [routeParams, isLoggedIn, enableRemoteModels, toggleRemoteModels]);
 
   useEffect(() => {
-    const handleProgress = async ({ modelName, ...progress }: any) => {
-      if (!modelName || modelName.startsWith('com.inferra.transfer.')) {
-        return;
+    const handleCompleted = async ({ modelName, downloadId, ...rest }: any) => {
+      if (!modelName || modelName.startsWith('com.inferra.transfer.')) return;
+      const filename = modelName.split('/').pop() || modelName;
+      if (!isAndroid) {
+        const totalBytes = typeof rest.totalBytes === 'number' ? rest.totalBytes : 0;
+        await downloadNotificationService.showNotification(filename, downloadId, 100, totalBytes, totalBytes);
       }
+      await refreshStoredModels();
+      setTimeout(() => {
+        setDownloadProgress(prev => {
+          const next = { ...prev };
+          delete next[modelName];
+          return next;
+        });
+      }, 1000);
+    };
+
+    const handleFailed = async ({ modelName, downloadId }: any) => {
+      if (!modelName || modelName.startsWith('com.inferra.transfer.')) return;
+      if (!isAndroid) {
+        await downloadNotificationService.cancelNotification(downloadId);
+      }
+      setTimeout(() => {
+        setDownloadProgress(prev => {
+          const next = { ...prev };
+          delete next[modelName];
+          return next;
+        });
+      }, 1000);
+    };
+
+    const handleNotificationProgress = async ({ modelName, ...progress }: any) => {
+      if (!modelName || modelName.startsWith('com.inferra.transfer.')) return;
+      if (isAndroid) return;
+      if (progress.status === 'completed' || progress.status === 'failed' || progress.status === 'cancelled') return;
       const filename = modelName.split('/').pop() || modelName;
       const bytesDownloaded = typeof progress.bytesDownloaded === 'number' ? progress.bytesDownloaded : 0;
       const totalBytes = typeof progress.totalBytes === 'number' ? progress.totalBytes : 0;
       const progressValue = typeof progress.progress === 'number' ? progress.progress : 0;
-
-      if (progress.status === 'completed') {
-        if (!isAndroid) {
-          await downloadNotificationService.showNotification(filename, progress.downloadId, 100, bytesDownloaded, totalBytes);
-        }
-        setDownloadProgress(prev => ({
-          ...prev,
-          [filename]: { progress: 100, bytesDownloaded, totalBytes, status: 'completed', downloadId: progress.downloadId }
-        }));
-        await refreshStoredModels();
-        setTimeout(() => {
-          setDownloadProgress(prev => {
-            const newProgress = { ...prev };
-            delete newProgress[filename];
-            return newProgress;
-          });
-        }, 1000);
-      } else if (progress.status === 'failed') {
-        if (!isAndroid) {
-          await downloadNotificationService.cancelNotification(progress.downloadId);
-        }
-        setDownloadProgress(prev => ({
-          ...prev,
-          [filename]: { progress: 0, bytesDownloaded: 0, totalBytes: 0, status: 'failed', downloadId: progress.downloadId, error: progress.error }
-        }));
-        setTimeout(() => {
-          setDownloadProgress(prev => {
-            const newProgress = { ...prev };
-            delete newProgress[filename];
-            return newProgress;
-          });
-        }, 1000);
-      } else {
-        if (!isAndroid) {
-          await downloadNotificationService.updateProgress(progress.downloadId, progressValue, bytesDownloaded, totalBytes, filename);
-        }
-        setDownloadProgress(prev => ({
-          ...prev,
-          [filename]: { progress: progressValue, bytesDownloaded, totalBytes, status: progress.status, downloadId: progress.downloadId }
-        }));
-      }
+      await downloadNotificationService.updateProgress(progress.downloadId, progressValue, bytesDownloaded, totalBytes, filename);
     };
 
     const setupBackgroundTask = async () => {
@@ -369,10 +360,14 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     };
 
     setupBackgroundTask();
-    modelDownloader.on('downloadProgress', handleProgress);
+    modelDownloader.on('downloadCompleted', handleCompleted);
+    modelDownloader.on('downloadFailed', handleFailed);
+    modelDownloader.on('downloadProgress', handleNotificationProgress);
     
     return () => {
-      modelDownloader.off('downloadProgress', handleProgress);
+      modelDownloader.off('downloadCompleted', handleCompleted);
+      modelDownloader.off('downloadFailed', handleFailed);
+      modelDownloader.off('downloadProgress', handleNotificationProgress);
     };
   }, []);
 

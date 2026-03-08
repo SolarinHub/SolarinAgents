@@ -4,7 +4,6 @@ import {
   View,
   Modal,
   TouchableOpacity,
-  SafeAreaView,
   Text,
   TextInput,
   FlatList,
@@ -14,6 +13,7 @@ import {
   Platform,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type PageImage = {
@@ -82,7 +82,13 @@ export default function PDFGridView({
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+      <View style={{ flex: 1, backgroundColor: isDark ? '#1a1a1a' : '#ffffff' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
         <View style={styles.header}>
           <Text 
             style={[
@@ -162,10 +168,6 @@ export default function PDFGridView({
           />
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
           <View style={[styles.gridFooter, { backgroundColor: isDark ? '#1a1a1a' : '#ffffff' }]}>
             {ragEnabled ? (
               <View style={styles.ragRow}>
@@ -241,8 +243,9 @@ export default function PDFGridView({
               </Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

@@ -28,6 +28,7 @@ export const HuggingFaceSearchBar: React.FC<HuggingFaceSearchBarProps> = ({
         placeholder="Search on HuggingFace..."
         onChangeText={onSearchChange}
         onSubmitEditing={onSearchSubmit}
+        onClearIconPress={onClearSearch}
         value={searchQuery}
         style={[styles.searchBar, { backgroundColor: themeColors.cardBackground }]}
         inputStyle={{ color: themeColors.text }}

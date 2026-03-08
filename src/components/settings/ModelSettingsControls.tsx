@@ -90,7 +90,7 @@ const ModelSettingsControls = ({
         <Text style={[styles.sectionTitle, { color: themeColors.secondaryText }]}>CORE SETTINGS</Text>
       </View>
 
-      <View style={[styles.settingItem, styles.settingItemBorder, !caps.jinja && styles.disabledSettingItem]}>
+      <View style={[styles.settingItem, styles.settingItemBorder]}>
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
             <MaterialCommunityIcons name="code-braces" size={22} color={iconColor} />
@@ -102,6 +102,9 @@ const ModelSettingsControls = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Enable Jinja templating for chat formatting. Better compatibility with modern models.
             </Text>
+            {!caps.jinja && (
+              <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
+            )}
             {(modelSettings.jinja ?? false) !== (defaultSettings.jinja ?? false) && (
               <TouchableOpacity
                 onPress={() => onSettingsChange({ jinja: defaultSettings.jinja ?? false })}
@@ -116,15 +119,13 @@ const ModelSettingsControls = ({
         <Switch
           value={modelSettings.jinja}
           onValueChange={(value) => onSettingsChange({ jinja: value })}
-          disabled={!caps.jinja}
           trackColor={{ false: themeColors.borderColor, true: themeColors.primary + '80' }}
           thumbColor={modelSettings.jinja ? themeColors.primary : themeColors.background}
         />
       </View>
 
       <TouchableOpacity 
-        style={[styles.settingItem, styles.settingItemBorder, !caps.grammar && styles.disabledSettingItem]}
-        disabled={!caps.grammar}
+        style={[styles.settingItem, styles.settingItemBorder]}
         onPress={onGrammarDialogOpen}
       >
         <View style={styles.settingLeft}>
@@ -143,6 +144,9 @@ const ModelSettingsControls = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Enforce specific grammar rules to ensure generated text follows a particular structure.
             </Text>
+            {!caps.grammar && (
+              <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
+            )}
             {defaultSettings.grammar !== undefined && isStringDifferent(modelSettings.grammar, defaultSettings.grammar) && (
               <TouchableOpacity
                 onPress={() => onSettingsChange({ grammar: defaultSettings.grammar })}
@@ -261,8 +265,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  disabledSettingItem: {
-    opacity: 0.5,
+  unsupportedText: {
+    fontSize: 11,
+    color: '#FF9500',
+    fontWeight: '500',
+    marginTop: 4,
   },
 });
 

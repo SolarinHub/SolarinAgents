@@ -15,6 +15,7 @@ interface SettingSliderProps {
   description: string;
   onPressChange: () => void;
   disabled?: boolean;
+  warningText?: string;
 }
 
 export default function SettingSlider({
@@ -28,6 +29,7 @@ export default function SettingSlider({
   description,
   onPressChange,
   disabled = false,
+  warningText,
 }: SettingSliderProps) {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
@@ -43,9 +45,8 @@ export default function SettingSlider({
 
   return (
     <TouchableOpacity 
-      style={[styles.settingItem, styles.settingItemBorder, disabled && { opacity: 0.5 }]}
-      onPress={disabled ? undefined : onPressChange}
-      disabled={disabled}
+      style={[styles.settingItem, styles.settingItemBorder]}
+      onPress={onPressChange}
     >
       <View style={styles.settingLeft}>
         <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
@@ -63,7 +64,10 @@ export default function SettingSlider({
           <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
             {description}
           </Text>
-            {!isDefaultValue && !disabled && (
+          {warningText && (
+            <Text style={styles.unsupportedText}>{warningText}</Text>
+          )}
+            {!isDefaultValue && (
             <TouchableOpacity
               onPress={handleReset}
               style={[styles.resetButton, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}
@@ -116,6 +120,12 @@ const styles = StyleSheet.create({
   settingText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  unsupportedText: {
+    fontSize: 11,
+    color: '#FF9500',
+    fontWeight: '500',
+    marginTop: 4,
   },
   valueText: {
     fontSize: 16,

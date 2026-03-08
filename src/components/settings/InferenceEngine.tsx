@@ -36,7 +36,7 @@ const InferenceEngineSection: React.FC<InferenceEngineProps> = ({
       icon: 'apple',
       enabled: true,
       requiresMLX: true,
-      experimental: true,
+      beta: true,
     },
   ], []);
 
@@ -68,9 +68,9 @@ const InferenceEngineSection: React.FC<InferenceEngineProps> = ({
             >
               {engine.name}
             </Text>
-            {engine.experimental && (
+            {engine.beta && (
               <View style={[styles.tag, { backgroundColor: themeColors.primary + '20' }]}>
-                <Text style={[styles.tagText, { color: themeColors.primary }]}>Experimental</Text>
+                <Text style={[styles.tagText, { color: themeColors.primary }]}>Beta</Text>
               </View>
             )}
           </View>

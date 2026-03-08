@@ -4,7 +4,6 @@ import {
   View,
   Modal,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   Text,
   ActivityIndicator,
@@ -12,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import PdfRendererView from 'react-native-pdf-renderer';
 import { useTheme } from '../context/ThemeContext';

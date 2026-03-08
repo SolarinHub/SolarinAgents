@@ -3,7 +3,7 @@ export default {
     name: "InferrLM",
     slug: "inferrlm",
     owner: "subhajitgorai",
-    version: "0.7.9",
+    version: "0.8.0",
     orientation: "default",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
@@ -11,11 +11,6 @@ export default {
     privacy: "public",
     keywords: ["AI", "chat", "assistant", "machine learning", "language model", "artificial intelligence"],
     newArchEnabled: true,
-    splash: {
-      image: "./assets/splash.png",
-      resizeMode: "cover",
-      backgroundColor: "#660880"
-    },
     updates: {
       enabled: true,
       checkAutomatically: 'ON_LOAD',
@@ -29,8 +24,7 @@ export default {
       requireFullScreen: false,
       bundleIdentifier: "com.gorai.inferra",
       buildNumber: "281",
-      runtimeVersion: "0.7.9",
-      deploymentTarget: "26.0",
+      runtimeVersion: "0.8.0",
       infoPlist: {
         UIBackgroundModes: [
           "fetch",
@@ -65,7 +59,7 @@ export default {
         backgroundColor: "#660880"
       },
       package: "com.gorai.ragionare",
-      runtimeVersion: "0.7.9",
+      runtimeVersion: "0.8.0",
       googleServicesFile: "./google-services.json",
       edgeToEdgeEnabled: true,
       resizeableActivity: true,
@@ -75,6 +69,7 @@ export default {
         "BACKGROUND_FETCH",
         "WAKE_LOCK",
         "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_DATA_SYNC",
         "CAMERA",
         "READ_MEDIA_IMAGES",
         "WRITE_EXTERNAL_STORAGE"

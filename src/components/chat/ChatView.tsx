@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import ChatMarkdown from './ChatMarkdown';
+import MarkdownBoundary from './MarkdownBoundary';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import chatManager from '../../utils/ChatManager';
@@ -569,13 +570,18 @@ export default function ChatView({
             )
           ) : (
             <View style={styles.markdownWrapper}>
-              <ChatMarkdown
-                content={messageContent}
-                isStreaming={isCurrentlyStreaming}
+              <MarkdownBoundary
+                fallbackContent={messageContent}
                 textColor={item.role === 'user' ? '#fff' : themeColors.text}
-                codeHeaderColor={themeColors.headerText}
-                onCopyCode={onCopyText}
-              />
+              >
+                <ChatMarkdown
+                  content={messageContent}
+                  isStreaming={isCurrentlyStreaming}
+                  textColor={item.role === 'user' ? '#fff' : themeColors.text}
+                  codeHeaderColor={themeColors.headerText}
+                  onCopyCode={onCopyText}
+                />
+              </MarkdownBoundary>
             </View>
           )}
 

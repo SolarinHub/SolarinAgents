@@ -14,8 +14,6 @@ import AppHeader from '../components/AppHeader';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { llamaManager } from '../utils/LlamaManager';
-import ModelSettingDialog from '../components/ModelSettingDialog';
-import StopWordsDialog from '../components/StopWordsDialog';
 import SystemPromptDialog from '../components/SystemPromptDialog';
 import { fs as FileSystem } from '../services/fs';
 import { useFocusEffect } from '@react-navigation/native';
@@ -26,7 +24,6 @@ import SupportSection from '../components/settings/SupportSection';
 import ModelSettingsSection, { type GpuConfig } from '../components/settings/ModelSettingsSection';
 import SystemInfoSection from '../components/settings/SystemInfoSection';
 import StorageSection from '../components/settings/StorageSection';
-import { ActivityIndicator as PaperActivityIndicator } from 'react-native-paper';
 import Dialog from '../components/Dialog';
 import * as WebBrowser from 'expo-web-browser';
 import { DEFAULT_SETTINGS } from '../config/llamaConfig';
@@ -104,7 +101,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   }>({
     visible: false,
   });
-  const [showStopWordsDialog, setShowStopWordsDialog] = useState(false);
   const [showSystemPromptDialog, setShowSystemPromptDialog] = useState(false);
   const [storageInfo, setStorageInfo] = useState({
     tempSize: '0 B',
@@ -123,7 +119,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
-  const [dialogLoading, setDialogLoading] = useState(false);
   const [dialogPrimaryText, setDialogPrimaryText] = useState<string | undefined>(undefined);
   const [dialogPrimaryPress, setDialogPrimaryPress] = useState<(() => void) | undefined>(undefined);
   const [dialogSecondaryText, setDialogSecondaryText] = useState<string | undefined>(undefined);
@@ -131,7 +126,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
   const hideDialog = () => {
     setDialogVisible(false);
-    setDialogLoading(false);
   };
 
   interface BtnCfg { label: string; onPress: () => void }
@@ -141,16 +135,14 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     message: string,
     primary?: BtnCfg,
     secondary?: BtnCfg,
-    loading: boolean = false
   ) => {
     setDialogTitle(title);
     setDialogMessage(message);
-    setDialogLoading(loading);
     const autoClose = () => setDialogVisible(false);
-    setDialogPrimaryText(loading ? undefined : (primary?.label ?? 'OK'));
-    setDialogPrimaryPress(loading ? undefined : () => primary ? primary.onPress : autoClose);
-    setDialogSecondaryText(loading ? undefined : secondary?.label);
-    setDialogSecondaryPress(loading ? undefined : (secondary ? () => secondary.onPress : undefined));
+    setDialogPrimaryText(primary?.label ?? 'OK');
+    setDialogPrimaryPress(() => primary ? primary.onPress : autoClose);
+    setDialogSecondaryText(secondary?.label);
+    setDialogSecondaryPress(secondary ? () => secondary.onPress : undefined);
     setDialogVisible(true);
   };
 
@@ -410,19 +402,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     setDialogConfig({ visible: false });
   };
 
-  const handleMaxTokensPress = () => {
-    handleOpenDialog({
-      key: 'maxTokens',
-      label: 'Max Response Tokens',
-      value: modelSettings.maxTokens,
-      defaultValue: DEFAULT_SETTINGS.maxTokens,
-      minimumValue: 1,
-      maximumValue: 4096,
-      step: 1,
-      description: "Maximum number of tokens in model responses. More tokens = longer responses but slower generation."
-    });
-  };
-
   const gpuConfig = React.useMemo<GpuConfig | undefined>(() => {
     if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
       return undefined;
@@ -481,10 +460,12 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getDirectorySize = async (directory: string): Promise<number> => {
+  const getDirectorySize = async (directory: string, depth = 0): Promise<number> => {
     try {
       const dirInfo = await FileSystem.getInfoAsync(directory);
-      if (!dirInfo.exists) return 0;
+      if (!dirInfo.exists) {
+        return 0;
+      }
 
       const files = await FileSystem.readDirectoryAsync(directory);
       let totalSize = 0;
@@ -497,7 +478,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         }
 
         if ((fileInfo as any).isDirectory) {
-          totalSize += await getDirectorySize(filePath);
+          totalSize += await getDirectorySize(filePath, depth + 1);
         } else {
           totalSize += (fileInfo as any).size || 0;
         }
@@ -574,7 +555,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     const modelsDir = `${FileSystem.documentDirectory}models`;
     const hfDir = `${FileSystem.documentDirectory}huggingface`;
 
-    showDialog('', '', undefined, undefined, true);
+    setClearingType('models');
 
     try {
       const [modelsSize, hfSize] = await Promise.all([
@@ -584,6 +565,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
       const totalSize = modelsSize + hfSize;
       const totalSizeText = formatBytes(totalSize);
 
+      setClearingType(null);
       showDialog(
         'Clear All Models',
         `Are you sure you want to delete all models? This action cannot be undone.\n\nStorage to be freed: ${totalSizeText}`,
@@ -604,9 +586,15 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
             }
           }
         },
-        { label: 'Cancel', onPress: hideDialog }
+        {
+          label: 'Cancel',
+          onPress: () => {
+            hideDialog();
+          }
+        }
       );
     } catch (error) {
+      setClearingType(null);
       showDialog('Error', 'Failed to clear models');
     }
   };
@@ -771,8 +759,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           defaultSettings={DEFAULT_SETTINGS}
           error={error}
           onSettingsChange={handleSettingsChange}
-          onMaxTokensPress={handleMaxTokensPress}
-          onStopWordsPress={() => setShowStopWordsDialog(true)}
           onDialogOpen={handleOpenDialog}
           activeEngine={activeInferenceEngine}
           engineEnabled={engineEnabled}
@@ -787,6 +773,7 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           showAppleFoundationToggle={isAppleDevice}
           appleFoundationEnabled={appleFoundationEnabled}
           onToggleAppleFoundation={handleAppleFoundationToggle}
+          onModelParametersPress={() => navigation.navigate('ModelParameters')}
         />
 
         <StorageSection
@@ -805,55 +792,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
 
         <SystemInfoSection systemInfo={systemInfo} />
         
-        {dialogConfig.setting && (
-          <ModelSettingDialog
-            key={dialogConfig.setting.key ?? dialogConfig.setting.label}
-            visible={dialogConfig.visible}
-            onClose={handleCloseDialog}
-            onSave={async (value) => {
-              if (!dialogConfig.setting) {
-                return;
-              }
-
-              try {
-                if (dialogConfig.setting.onSave) {
-                  await dialogConfig.setting.onSave(value);
-                } else if (dialogConfig.setting.key) {
-                  await handleSettingsChange(
-                    { [dialogConfig.setting.key]: value } as Partial<typeof modelSettings>
-                  );
-                }
-                handleCloseDialog();
-              } catch (error) {
-                showDialog('Error', 'Failed to save setting');
-              }
-            }}
-            defaultValue={
-              dialogConfig.setting.defaultValue ??
-              getDefaultValueForKey(dialogConfig.setting.key) ??
-              dialogConfig.setting.value
-            }
-            label={dialogConfig.setting.label}
-            value={dialogConfig.setting.value}
-            minimumValue={dialogConfig.setting.minimumValue}
-            maximumValue={dialogConfig.setting.maximumValue}
-            step={dialogConfig.setting.step}
-            description={dialogConfig.setting.description}
-            />
-          )}
-
-        <StopWordsDialog
-          visible={showStopWordsDialog}
-          onClose={() => setShowStopWordsDialog(false)}
-          onSave={(stopWords) => {
-            handleSettingsChange({ stopWords });
-            setShowStopWordsDialog(false);
-          }}
-          value={modelSettings.stopWords}
-          defaultValue={DEFAULT_SETTINGS.stopWords}
-          description="Enter words that will cause the model to stop generating. Each word should be on a new line. The model will stop when it generates any of these words."
-        />
-
         <SystemPromptDialog
           visible={showSystemPromptDialog}
           onClose={() => setShowSystemPromptDialog(false)}
@@ -872,22 +810,13 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         visible={showAppleFoundationDialog}
         onDismiss={() => setShowAppleFoundationDialog(false)}
         title="Apple Intelligence"
-        description="Apple Intelligence not supported on this device."
+        description="Apple Intelligence not enabled on this device."
         buttonText="OK"
         onClose={() => setShowAppleFoundationDialog(false)}
       />
 
       <Dialog
-        visible={dialogVisible && dialogLoading}
-        onDismiss={undefined}
-      >
-        <View style={styles.dialogLoader}>
-          <PaperActivityIndicator size="large" />
-        </View>
-      </Dialog>
-
-      <Dialog
-        visible={dialogVisible && !dialogLoading}
+        visible={dialogVisible}
         onDismiss={hideDialog}
         title={dialogTitle || undefined}
         description={dialogMessage || undefined}
@@ -938,9 +867,5 @@ const styles = StyleSheet.create({
   debugButtonSubtitle: {
     fontSize: 14,
     marginTop: 2,
-  },
-  dialogLoader: {
-    marginTop: 14,
-    alignItems: 'center',
   },
 }); 

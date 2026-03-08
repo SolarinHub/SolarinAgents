@@ -1,18 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import SettingsSection from './SettingsSection';
 import ModelSettingsCore, { GpuConfig } from './ModelSettingsCore';
-import ModelSettingsSampling from './ModelSettingsSampling';
-import ModelSettingsControls from './ModelSettingsControls';
-import ModelSettingsPenalties from './ModelSettingsPenalties';
-import ModelSettingsMirostat from './ModelSettingsMirostat';
-import ModelSettingsDry from './ModelSettingsDry';
-import ModelSettingsAdvanced from './ModelSettingsAdvanced';
-import ModelSettingsModals from './ModelSettingsModals';
-import { featureCaps } from '../../services/feature-availability';
 
 type ModelSettings = {
   maxTokens: number;
@@ -53,15 +45,7 @@ type ModelSettingsSectionProps = {
   defaultSettings: Partial<ModelSettings>;
   error: string | null;
   onSettingsChange: (settings: Partial<ModelSettings>) => void;
-  onMaxTokensPress: () => void;
-  onStopWordsPress: () => void;
-  onGrammarPress?: () => void;
-  onSeedPress?: () => void;
-  onNProbsPress?: () => void;
-  onLogitBiasPress?: () => void;
-  onDrySequenceBreakersPress?: () => void;
   onDialogOpen: (config: any) => void;
-  defaultExpanded?: boolean;
   activeEngine?: 'llama' | 'mlx';
   engineEnabled?: Record<'llama' | 'mlx', boolean>;
   onEngineToggle?: (engine: 'llama' | 'mlx', enabled: boolean) => void;
@@ -75,6 +59,7 @@ type ModelSettingsSectionProps = {
   showAppleFoundationToggle?: boolean;
   appleFoundationEnabled?: boolean;
   onToggleAppleFoundation?: (enabled: boolean) => void;
+  onModelParametersPress?: () => void;
 };
 
 const ModelSettingsSection = ({
@@ -82,15 +67,7 @@ const ModelSettingsSection = ({
   defaultSettings,
   error,
   onSettingsChange,
-  onMaxTokensPress,
-  onStopWordsPress,
-  onGrammarPress,
-  onSeedPress,
-  onNProbsPress,
-  onLogitBiasPress,
-  onDrySequenceBreakersPress,
   onDialogOpen,
-  defaultExpanded = false,
   activeEngine,
   engineEnabled,
   onEngineToggle,
@@ -104,25 +81,11 @@ const ModelSettingsSection = ({
   showAppleFoundationToggle,
   appleFoundationEnabled,
   onToggleAppleFoundation,
+  onModelParametersPress,
 }: ModelSettingsSectionProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const iconColor = currentTheme === 'dark' ? '#FFFFFF' : themeColors.primary;
-  const [showModelSettings, setShowModelSettings] = useState(defaultExpanded);
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
-  
-  const [showGrammarDialog, setShowGrammarDialog] = useState(false);
-  const [showSeedDialog, setShowSeedDialog] = useState(false);
-  const [showNProbsDialog, setShowNProbsDialog] = useState(false);
-  const [showLogitBiasDialog, setShowLogitBiasDialog] = useState(false);
-  const [showDrySequenceBreakersDialog, setShowDrySequenceBreakersDialog] = useState(false);
-  
-  const [tempGrammar, setTempGrammar] = useState('');
-  const [tempSeed, setTempSeed] = useState('');
-  const [tempNProbs, setTempNProbs] = useState('');
-  const [tempLogitBias, setTempLogitBias] = useState('');
-  const [tempDrySequenceBreakers, setTempDrySequenceBreakers] = useState('');
 
   return (
     <SettingsSection title="MODEL SETTINGS">
@@ -143,9 +106,9 @@ const ModelSettingsSection = ({
         onDialogOpen={onDialogOpen}
       />
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.settingItem}
-        onPress={() => setShowModelSettings(!showModelSettings)}
+        onPress={onModelParametersPress}
       >
         <View style={styles.settingLeft}>
           <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
@@ -163,122 +126,16 @@ const ModelSettingsSection = ({
               </View>
             </View>
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
-              Tap to {showModelSettings ? 'hide' : 'view'} advanced settings
+              Sampling, penalties, and other parameters
             </Text>
           </View>
         </View>
-        <MaterialCommunityIcons 
-          name={showModelSettings ? "chevron-up" : "chevron-down"} 
-          size={20} 
-          color={themeColors.secondaryText} 
+        <MaterialCommunityIcons
+          name="chevron-right"
+          size={20}
+          color={themeColors.secondaryText}
         />
       </TouchableOpacity>
-
-      {showModelSettings && (
-        <>
-          <ModelSettingsSampling
-            modelSettings={modelSettings}
-            defaultSettings={defaultSettings}
-            error={error}
-            onSettingsChange={onSettingsChange}
-            onMaxTokensPress={onMaxTokensPress}
-            onDialogOpen={onDialogOpen}
-            activeEngine={activeEngine}
-          />
-
-          <ModelSettingsControls
-            modelSettings={modelSettings}
-            defaultSettings={defaultSettings}
-            onSettingsChange={onSettingsChange}
-            onStopWordsPress={onStopWordsPress}
-            onGrammarDialogOpen={() => {
-              if (!caps.grammar) {
-                return;
-              }
-              setTempGrammar(modelSettings.grammar);
-              setShowGrammarDialog(true);
-            }}
-            activeEngine={activeEngine}
-          />
-
-          <ModelSettingsPenalties
-            modelSettings={modelSettings}
-            defaultSettings={defaultSettings}
-            onSettingsChange={onSettingsChange}
-            onDialogOpen={onDialogOpen}
-          />
-
-          <ModelSettingsMirostat
-            modelSettings={modelSettings}
-            defaultSettings={defaultSettings}
-            onSettingsChange={onSettingsChange}
-            onDialogOpen={onDialogOpen}
-            activeEngine={activeEngine}
-          />
-
-          <ModelSettingsDry
-            modelSettings={modelSettings}
-            defaultSettings={defaultSettings}
-            onSettingsChange={onSettingsChange}
-            onDialogOpen={onDialogOpen}
-            onDrySequenceBreakersDialogOpen={() => {
-              if (!caps.dry) {
-                return;
-              }
-              setTempDrySequenceBreakers((modelSettings.drySequenceBreakers || []).join('\n'));
-              setShowDrySequenceBreakersDialog(true);
-            }}
-            activeEngine={activeEngine}
-          />
-
-          <ModelSettingsAdvanced
-            modelSettings={modelSettings}
-            defaultSettings={defaultSettings}
-            onSettingsChange={onSettingsChange}
-            onNProbsDialogOpen={() => {
-              setTempNProbs((modelSettings.nProbs ?? 0).toString());
-              setShowNProbsDialog(true);
-            }}
-            onSeedDialogOpen={() => {
-              setTempSeed((modelSettings.seed ?? -1).toString());
-              setShowSeedDialog(true);
-            }}
-            onLogitBiasDialogOpen={() => {
-              const logitBiasText = (modelSettings.logitBias || [])
-                .map(([tokenId, bias]) => `${tokenId}, ${bias}`)
-                .join('\n');
-              setTempLogitBias(logitBiasText);
-              setShowLogitBiasDialog(true);
-            }}
-          />
-        </>
-      )}
-
-      <ModelSettingsModals
-        modelSettings={modelSettings}
-        defaultSettings={defaultSettings}
-        onSettingsChange={onSettingsChange}
-        showGrammarDialog={showGrammarDialog}
-        setShowGrammarDialog={setShowGrammarDialog}
-        showSeedDialog={showSeedDialog}
-        setShowSeedDialog={setShowSeedDialog}
-        showNProbsDialog={showNProbsDialog}
-        setShowNProbsDialog={setShowNProbsDialog}
-        showLogitBiasDialog={showLogitBiasDialog}
-        setShowLogitBiasDialog={setShowLogitBiasDialog}
-        showDrySequenceBreakersDialog={showDrySequenceBreakersDialog}
-        setShowDrySequenceBreakersDialog={setShowDrySequenceBreakersDialog}
-        tempGrammar={tempGrammar}
-        setTempGrammar={setTempGrammar}
-        tempSeed={tempSeed}
-        setTempSeed={setTempSeed}
-        tempNProbs={tempNProbs}
-        setTempNProbs={setTempNProbs}
-        tempLogitBias={tempLogitBias}
-        setTempLogitBias={setTempLogitBias}
-        tempDrySequenceBreakers={tempDrySequenceBreakers}
-        setTempDrySequenceBreakers={setTempDrySequenceBreakers}
-      />
     </SettingsSection>
   );
 };

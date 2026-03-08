@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, Animated, LayoutChangeEvent } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
@@ -20,77 +20,85 @@ export const ModelScreenTabs: React.FC<ModelScreenTabsProps> = ({
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
 
+  const tabs: TabType[] = enableRemoteModels
+    ? ['stored', 'downloadable', 'remote']
+    : ['stored', 'downloadable'];
+
+  const tabIndex = tabs.indexOf(activeTab);
+  const slideAnim = useRef(new Animated.Value(tabIndex)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    Animated.spring(slideAnim, {
+      toValue: tabIndex,
+      useNativeDriver: true,
+      tension: 60,
+      friction: 10,
+    }).start();
+  }, [tabIndex]);
+
+  const tabWidth = containerWidth > 0 ? containerWidth / tabs.length : 0;
+
+  const translateX = slideAnim.interpolate({
+    inputRange: tabs.map((_, i) => i),
+    outputRange: tabs.map((_, i) => i * tabWidth),
+  });
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    setContainerWidth(e.nativeEvent.layout.width);
+  };
+
+  const tabIcons: Record<TabType, React.ComponentProps<typeof MaterialCommunityIcons>['name']> = {
+    stored: 'folder',
+    downloadable: 'cloud-download',
+    remote: 'cloud',
+  };
+
+  const tabLabels: Record<TabType, string> = {
+    stored: 'Stored Models',
+    downloadable: 'Download Models',
+    remote: 'Remote Models',
+  };
+
   return (
     <View style={styles.tabContainer}>
-      <View style={[styles.segmentedControl, { backgroundColor: themeColors.borderColor }]}>
-        <TouchableOpacity
-          style={[
-            styles.segmentButton,
-            { borderColor: themeColors.primary },
-            activeTab === 'stored' && styles.activeSegment,
-            activeTab === 'stored' && { backgroundColor: themeColors.primary }
-          ]}
-          onPress={() => onTabPress('stored')}
-        >
-          <MaterialCommunityIcons 
-            name="folder" 
-            size={18} 
-            color={activeTab === 'stored' ? '#fff' : themeColors.text} 
-            style={styles.segmentIcon}
-          />
-          <Text style={[
-            styles.segmentText,
-            { color: activeTab === 'stored' ? '#fff' : themeColors.text }
-          ]}>
-            Stored Models
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.segmentButton,
-            { borderColor: themeColors.primary },
-            activeTab === 'downloadable' && styles.activeSegment,
-            activeTab === 'downloadable' && { backgroundColor: themeColors.primary }
-          ]}
-          onPress={() => onTabPress('downloadable')}
-        >
-          <MaterialCommunityIcons 
-            name="cloud-download" 
-            size={18} 
-            color={activeTab === 'downloadable' ? '#fff' : themeColors.text}
-            style={styles.segmentIcon}
-          />
-          <Text style={[
-            styles.segmentText,
-            { color: activeTab === 'downloadable' ? '#fff' : themeColors.text }
-          ]}>
-            Download Models
-          </Text>
-        </TouchableOpacity>
-        {enableRemoteModels && (
-          <TouchableOpacity
+      <View
+        style={[styles.segmentedControl, { backgroundColor: themeColors.borderColor }]}
+        onLayout={onLayout}
+      >
+        {tabWidth > 0 && (
+          <Animated.View
             style={[
-              styles.segmentButton,
-              { borderColor: themeColors.primary },
-              activeTab === 'remote' && styles.activeSegment,
-              activeTab === 'remote' && { backgroundColor: themeColors.primary }
+              styles.slidingPill,
+              {
+                width: tabWidth,
+                backgroundColor: themeColors.primary,
+                transform: [{ translateX }],
+              },
             ]}
-            onPress={() => onTabPress('remote')}
-          >
-            <MaterialCommunityIcons 
-              name="cloud" 
-              size={18} 
-              color={activeTab === 'remote' ? '#fff' : themeColors.text}
-              style={styles.segmentIcon}
-            />
-            <Text style={[
-              styles.segmentText,
-              { color: activeTab === 'remote' ? '#fff' : themeColors.text }
-            ]}>
-              Remote Models
-            </Text>
-          </TouchableOpacity>
+          />
         )}
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              activeOpacity={1}
+              style={styles.segmentButton}
+              onPress={() => onTabPress(tab)}
+            >
+              <MaterialCommunityIcons
+                name={tabIcons[tab]}
+                size={18}
+                color={isActive ? '#fff' : themeColors.text}
+                style={styles.segmentIcon}
+              />
+              <Text style={[styles.segmentText, { color: isActive ? '#fff' : themeColors.text }]}>
+                {tabLabels[tab]}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -107,6 +115,17 @@ const styles = StyleSheet.create({
     padding: 2,
     marginTop: 8,
   },
+  slidingPill: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   segmentButton: {
     flex: 1,
     paddingVertical: 8,
@@ -114,16 +133,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  activeSegment: {
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
   },
   segmentText: {
     fontSize: 14,
@@ -134,3 +143,4 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 });
+

@@ -10,6 +10,7 @@ import LicensesScreen from '../screens/LicensesScreen';
 import ContentTermsScreen from '../screens/ContentTermsScreen';
 import ReportScreen from '../screens/ReportScreen';
 import ModelSettingsScreen from '../screens/ModelSettingsScreen';
+import ModelParametersScreen from '../screens/ModelParametersScreen';
 import ServerLogsScreen from '../screens/ServerLogsScreen';
 import { RootStackParamList } from '../types/navigation';
 
@@ -80,6 +81,13 @@ export default function RootNavigator() {
         <Stack.Screen 
           name="ModelSettings" 
           component={ModelSettingsScreen}
+          options={{
+            animation: 'slide_from_right'
+          }}
+        />
+        <Stack.Screen 
+          name="ModelParameters" 
+          component={ModelParametersScreen}
           options={{
             animation: 'slide_from_right'
           }}

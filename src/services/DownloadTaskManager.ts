@@ -48,7 +48,6 @@ export class DownloadTaskManager extends EventEmitter {
         });
       },
       onProgress: (modelName: string, progress) => {
-        const displayName = this.tempNameMap.get(modelName) ?? modelName;
         const downloadId = this.getDownloadIdForModel(modelName);
         const downloadInfo = this.activeDownloads.get(modelName);
         const progressEvent: DownloadProgressEvent = {
@@ -56,7 +55,7 @@ export class DownloadTaskManager extends EventEmitter {
           bytesDownloaded: progress.bytesDownloaded,
           totalBytes: progress.bytesTotal,
           status: 'downloading',
-          modelName: displayName,
+          modelName: modelName,
           downloadId,
           nativeDownloadId: downloadInfo?.nativeDownloadId,
         };
@@ -108,14 +107,14 @@ export class DownloadTaskManager extends EventEmitter {
               bytesDownloaded: finalSize,
               totalBytes: finalSize,
               status: 'completed',
-              modelName: displayName,
+              modelName: modelName,
               downloadId: this.getDownloadIdForModel(modelName),
               nativeDownloadId: downloadInfo?.nativeDownloadId,
             };
-            
+
             this.emit('progress', progressData);
             this.emit('downloadCompleted', {
-              modelName: displayName,
+              modelName: modelName,
               downloadId: this.getDownloadIdForModel(modelName),
               finalPath: modelPath,
               nativeDownloadId: downloadInfo?.nativeDownloadId,
@@ -139,7 +138,7 @@ export class DownloadTaskManager extends EventEmitter {
           await this.saveDownloadProgress();
           
           this.emit('downloadFailed', {
-            modelName: displayName,
+            modelName: modelName,
             downloadId: this.getDownloadIdForModel(modelName),
             error: error instanceof Error ? error.message : 'Unknown error',
             nativeDownloadId: downloadInfo?.nativeDownloadId,
@@ -152,14 +151,14 @@ export class DownloadTaskManager extends EventEmitter {
         if (downloadInfo) {
           downloadInfo.status = 'failed';
         }
-        
+
         const tempPath = `${this.fileManager.getDownloadDir()}/${modelName}`;
         this.fileManager.deleteFile(tempPath).catch(() => {
           console.log('error_cleanup_failed', modelName);
         });
-        
+
         this.emit('downloadFailed', {
-          modelName: displayName,
+          modelName: modelName,
           downloadId: this.getDownloadIdForModel(modelName),
           error: error.message,
           nativeDownloadId: downloadInfo?.nativeDownloadId,
@@ -330,6 +329,8 @@ export class DownloadTaskManager extends EventEmitter {
         cleanupModelIds.add(mappedPackageName);
       }
 
+      this.manualCancellationSet.add(internalName);
+
       try {
         await backgroundDownloadService.abortTransfer(internalName);
       } catch (error) {
@@ -353,7 +354,6 @@ export class DownloadTaskManager extends EventEmitter {
           this.activeDownloads.delete(internalName);
           this.tempNameMap.delete(internalName);
 
-          this.manualCancellationSet.add(internalName);
           setTimeout(() => {
             this.manualCancellationSet.delete(internalName);
           }, 30000);
@@ -622,7 +622,7 @@ export class DownloadTaskManager extends EventEmitter {
           event.modelName === tempFileName || event.modelName === sanitizedModelId;
 
         const progressHandler = (event: DownloadProgressEvent) => {
-          if (matchesModelEvent(event)) {
+          if (event.modelName === tempFileName) {
             const combinedProgress = (downloadedBytes + event.bytesDownloaded) / totalSize * 100;
             this.emit('progress', {
               progress: combinedProgress,
@@ -674,6 +674,15 @@ export class DownloadTaskManager extends EventEmitter {
 
         await filePromise;
 
+        this.emit('progress', {
+          progress: (downloadedBytes / totalSize) * 100,
+          bytesDownloaded: downloadedBytes,
+          totalBytes: totalSize,
+          status: 'transferring',
+          modelName: sanitizedModelId,
+          downloadId,
+        });
+
         const tempModelPath = `${this.fileManager.getBaseDir()}/${tempFileName}`;
         const fileExistsInTemp = await FileSystem.getInfoAsync(tempFilePath);
         const fileExistsInModels = await FileSystem.getInfoAsync(tempModelPath);
@@ -688,6 +697,15 @@ export class DownloadTaskManager extends EventEmitter {
 
         this.tempNameMap.delete(tempFileName);
       }
+
+      this.emit('progress', {
+        progress: 100,
+        bytesDownloaded: totalSize,
+        totalBytes: totalSize,
+        status: 'transferring',
+        modelName: sanitizedModelId,
+        downloadId,
+      });
 
       this.startedDisplayNames.delete(sanitizedModelId);
       await this.removeMLXManifest(sanitizedModelId);

@@ -161,6 +161,10 @@ class MlxManager implements InferenceManager {
         throw new Error('mlx_model_not_downloaded');
       }
 
+      if (this.state.loaded) {
+        await this.release();
+      }
+
       let loadedId = '';
       let lastError: unknown;
 
@@ -203,7 +207,11 @@ class MlxManager implements InferenceManager {
     const lastMessage = messages[messages.length - 1];
     const prompt = typeof lastMessage.content === 'string' ? lastMessage.content : '';
     console.log('mlx_gen_prompt', { promptLength: prompt.length, role: lastMessage.role });
-    
+
+    if (opts?.settings?.systemPrompt !== undefined) {
+      LLM.systemPrompt = opts.settings.systemPrompt;
+    }
+
     let full = '';
     let tokenCount = 0;
     await LLM.stream(prompt, token => {

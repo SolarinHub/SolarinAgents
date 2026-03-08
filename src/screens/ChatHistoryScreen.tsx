@@ -78,9 +78,17 @@ export default function ChatHistoryScreen() {
       await chatManager.flushPendingSaves();
       const latest = chatManager.getLatestBranch(chatId);
       const targetId = latest?.id ?? chatId;
-      navigation.navigate('MainTabs', {
-        screen: 'HomeTab',
-        params: { loadChatId: targetId },
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainTabs',
+            params: {
+              screen: 'HomeTab',
+              params: { loadChatId: targetId },
+            },
+          },
+        ],
       });
     } catch (error) {
       showDialog('Error', 'Failed to load selected chat');

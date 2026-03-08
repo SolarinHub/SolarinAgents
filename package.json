@@ -65,7 +65,7 @@
     "firebase": "^12.2.1",
     "install": "^0.13.0",
     "jest-expo": "~54.0.17",
-    "llama.rn": "^0.11.3",
+    "llama.rn": "^0.11.4",
     "local-server": "file:./modules/local-server",
     "npm": "^11.8.0",
     "pdf-image": "file:./modules/pdf-image",

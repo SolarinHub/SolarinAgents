@@ -4,6 +4,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { fs as FileSystem } from '../services/fs';
 import { useTheme } from '../context/ThemeContext';
@@ -76,6 +77,7 @@ export default function DownloadsScreen() {
   const [dialogSecondaryPress, setDialogSecondaryPress] = useState<(() => void) | undefined>(undefined);
   const [cancelDialogVisible, setCancelDialogVisible] = useState(false);
   const [cancelModelName, setCancelModelName] = useState('');
+  const [isCancellingAll, setIsCancellingAll] = useState(false);
   const [mlxPackageFiles, setMlxPackageFiles] = useState<Record<string, string[]>>({});
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
 
@@ -103,7 +105,7 @@ export default function DownloadsScreen() {
     return data.status !== 'completed' &&
            data.status !== 'failed' &&
            data.status !== 'cancelled' &&
-           data.progress < 100;
+           (data.progress < 100 || data.status === 'transferring');
   });
 
   const downloads: DownloadItem[] = activeDownloads.map(([name, data]) => ({
@@ -115,10 +117,25 @@ export default function DownloadsScreen() {
     status: data.status || 'unknown'
   }));
 
+  /*
+    iOS background URLSession throttles didWriteData delegate callbacks, so native
+    progress events arrive infrequently. Polling synchronizeWithActiveTransfers via
+    ensureDownloadsAreRunning() queries the URLSession task byte counts directly,
+    giving real-time progress regardless of delegate callback frequency.
+  */
+  const hasActive = downloads.length > 0;
+
   useEffect(() => {
-    modelDownloader.ensureDownloadsAreRunning().catch(() => {
-    });
-  }, []);
+    modelDownloader.ensureDownloadsAreRunning().catch(() => {});
+
+    if (!hasActive) return;
+
+    const id = setInterval(() => {
+      modelDownloader.ensureDownloadsAreRunning().catch(() => {});
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [hasActive]);
 
   useEffect(() => {
     const loadMlxPackageFiles = async () => {
@@ -231,38 +248,52 @@ export default function DownloadsScreen() {
   };
 
   const handleCancelAll = () => {
-    const activeNames = downloads.map(item => item.name);
+    if (isCancellingAll) {
+      return;
+    }
+
+    const activeNames = Array.from(new Set(downloads.map(item => item.name)));
     if (activeNames.length === 0) {
       return;
     }
 
     const confirmCancelAll = async () => {
       hideDialog();
+      setIsCancellingAll(true);
+
+      const cancelledNames: string[] = [];
 
       try {
-        await Promise.allSettled(
-          activeNames.map(async modelName => {
-            if (buttonProcessingRef.current.has(modelName)) {
-              return;
-            }
-            buttonProcessingRef.current.add(modelName);
-            try {
-              await modelDownloader.cancelDownload(modelName);
-            } finally {
-              buttonProcessingRef.current.delete(modelName);
-            }
-          })
-        );
-
-        setDownloadProgress(prev => {
-          const next = { ...prev };
-          for (const modelName of activeNames) {
-            delete next[modelName];
+        for (const modelName of activeNames) {
+          if (buttonProcessingRef.current.has(modelName)) {
+            continue;
           }
-          return next;
-        });
-      } catch {
-        showDialog('Error', 'Failed to cancel all downloads');
+
+          buttonProcessingRef.current.add(modelName);
+          try {
+            await modelDownloader.cancelDownload(modelName);
+            cancelledNames.push(modelName);
+          } catch {
+          } finally {
+            buttonProcessingRef.current.delete(modelName);
+          }
+        }
+
+        if (cancelledNames.length > 0) {
+          setDownloadProgress(prev => {
+            const next = { ...prev };
+            for (const modelName of cancelledNames) {
+              delete next[modelName];
+            }
+            return next;
+          });
+        }
+
+        if (cancelledNames.length !== activeNames.length) {
+          showDialog('Error', 'Some downloads could not be cancelled. Please try again.');
+        }
+      } finally {
+        setIsCancellingAll(false);
       }
     };
 
@@ -276,8 +307,9 @@ export default function DownloadsScreen() {
 
   const headerRightButtons = downloads.length > 0 ? (
     <TouchableOpacity
-      style={styles.headerButton}
+      style={[styles.headerButton, isCancellingAll && styles.headerButtonDisabled]}
       onPress={handleCancelAll}
+      disabled={isCancellingAll}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       <MaterialCommunityIcons
@@ -286,13 +318,16 @@ export default function DownloadsScreen() {
         color={themeColors.headerText}
       />
     </TouchableOpacity>
-  ) : [];
+  ) : null;
 
   const renderItem = ({ item }: { item: DownloadItem }) => {
     const packageFiles = mlxPackageFiles[item.name] || [];
     const isMLXDownload = packageFiles.length > 0;
     const isExpanded = expandedPackages.has(item.name);
-    const progressText = `${Math.floor(item.progress || 0)}% • ${formatBytes(item.bytesDownloaded || 0)} / ${formatBytes(item.totalBytes || 0)}`;
+    const isTransferring = item.status === 'transferring';
+    const progressText = isTransferring
+      ? 'Transferring to models...'
+      : `${Math.floor(item.progress || 0)}% • ${formatBytes(item.bytesDownloaded || 0)} / ${formatBytes(item.totalBytes || 0)}`;
     
     return (
       <View style={[styles.downloadItem, { backgroundColor: themeColors.borderColor }]}>
@@ -315,19 +350,26 @@ export default function DownloadsScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <View style={styles.downloadActions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => handleCancel(item.name)}
-            >
-              <MaterialCommunityIcons name="close-circle" size={24} color={getThemeAwareColor('#ff4444', currentTheme)} />
-            </TouchableOpacity>
-          </View>
+          {!isTransferring && (
+            <View style={styles.downloadActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => handleCancel(item.name)}
+              >
+                <MaterialCommunityIcons name="close-circle" size={24} color={getThemeAwareColor('#ff4444', currentTheme)} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
         
-        <Text style={[styles.downloadProgress, { color: themeColors.secondaryText }]}>
-          {progressText}
-        </Text>
+        <View style={styles.transferRow}>
+          {isTransferring && (
+            <ActivityIndicator size="small" color={getThemeAwareColor('#4a0660', currentTheme)} style={styles.transferSpinner} />
+          )}
+          <Text style={[styles.downloadProgress, { color: themeColors.secondaryText }]}>
+            {progressText}
+          </Text>
+        </View>
 
         {isMLXDownload && isExpanded && (
           <View style={styles.packageFilesContainer}>
@@ -444,6 +486,15 @@ const styles = StyleSheet.create({
   downloadProgress: {
     fontSize: 14,
     marginBottom: 8,
+    flex: 1,
+  },
+  transferRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  transferSpinner: {
+    marginRight: 6,
+    marginBottom: 8,
   },
   progressBar: {
     height: 4,
@@ -481,5 +532,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerButtonDisabled: {
+    opacity: 0.5,
   },
 }); 

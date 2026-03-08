@@ -1,5 +1,6 @@
 package expo.modules.localserver
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,6 +11,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class LocalServerForegroundService : Service() {
@@ -84,7 +86,16 @@ class LocalServerForegroundService : Service() {
     currentUrl = intent.getStringExtra(EXTRA_URL)
     currentPeerCount = 0
     started = true
-    startForeground(NOTIFICATION_ID, buildNotification())
+    try {
+      startForeground(NOTIFICATION_ID, buildNotification())
+    } catch (e: Exception) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is ForegroundServiceStartNotAllowedException) {
+        Log.w("LocalServer", "fg_start_blocked")
+        stopSelf()
+        return
+      }
+      throw e
+    }
   }
 
   private fun handleStop() {

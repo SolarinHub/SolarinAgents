@@ -1,31 +1,35 @@
 
 ## InferrLM (Previously Inferra)
 <p>
-  <a href="" target="_blank"><img src="https://img.shields.io/badge/App_Version-0.7.5-6a1b9a" alt="App Version 0.7.5"></a>
+  <a href="" target="_blank"><img src="https://img.shields.io/badge/App_Version-0.8.0-6a1b9a" alt="App Version 0.8.0"></a>
   <a href="https://opensource.org/licenses/AGPL-3.0" target="_blank"><img src="https://img.shields.io/badge/License-AGPL--3.0-orange" alt="License: AGPL-3.0"></a>
 </p>
 <p>
   <img src="assets/source/InferrLM-header.jpg" alt="InferrLM Header" width="600">
 </p>
 
-InferrLM is a mobile application that brings LLMs & SLMs directly to your Android & iOS device and lets your device act as a local server. Cloud-based models like Claude, DeepSeek, Gemini and ChatGPT are also supported. File attachments with RAG are also well-supported for local models.
+InferrLM is a mobile application that brings LLMs & SLMs directly to your Android & iOS device and lets your device act as a local server. Cloud-based models like Claude, Gemini and ChatGPT are also supported. File attachments with RAG are also well-supported for local models.
 
-[<img src="https://github.com/user-attachments/assets/bdc18fc5-5a99-410c-b383-eaf9c737176e" alt="Get it on Google Play" width="150">](https://play.google.com/store/apps/details?id=com.gorai.ragionare)
+<p>
+  <a href="#"><img src="https://upload.wikimedia.org/wikipedia/commons/0/0d/Get_it_on_F-Droid.svg" alt="Get it on F-Droid" width="150" style="vertical-align:middle"></a>
+  <a href="https://play.google.com/store/apps/details?id=com.gorai.ragionare"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play" width="178" style="vertical-align:middle"></a>
+  <a href="https://apps.apple.com/us/app/inferra/id6754396856"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" width="164" style="vertical-align:middle"></a>
+</p>
 
-[<img src="https://github.com/user-attachments/assets/9274a034-3fed-4ed9-bad9-d99e55064e8f" alt="Get it on App Store" width="150">](https://apps.apple.com/us/app/inferra/id6754396856)
 
-If you want to support me and the development of this project, you can donate to me through [Ko-fi](https://ko-fi.com/subhajitgorai). Any amount is appreciated.
+If you want to support me and the development of this project, you can donate to me through [Ko-fi](https://ko-fi.com/subhajitgorai).
 
 ## Features
 
 ### Core Inference
-- Local inference through llama.cpp with support for GGUF models. More inference engines are planned for future releases. You can become a contributor by implementing additional ones. See the [contributions guide](#contributing) below.
-- Seamless integration with cloud-based models from OpenAI, Gemini, Anthropic and DeepSeek. You need your own API keys and an InferrLM registered account for remote models. Using remote models is optional.
-- Customizable base URLs for OpenAI-compatible providers like Ollama, LM Studio, OpenRouter, Groq and Together AI. This allows you to use local inference servers or alternative API endpoints.
-- Apple Foundation support for compatible iOS devices, for Apple Intelligence supported devices when available.
+- Local inference through llama.cpp with support for GGUF models on both Android and iOS.
+- Apple Silicon MLX inference (iOS only) via `react-native-nitro-mlx` for optimized on-device performance on Apple Silicon devices.
+- Seamless integration with cloud-based models from OpenAI, Gemini, and Anthropic. You need your own API keys and an InferrLM registered account for remote models. Using remote models is optional.
+- Customizable base URLs for OpenAI-compatible providers like OpenRouter, Groq, Ollama, LM Studio, Together AI. This allows you to access alternative API endpoints.
+- Apple Foundation model support (iOS only) for Apple Intelligence supported devices.
 
 ### Vision and Multimodal
-- Vision support through multimodal models with their corresponding projector (mmproj) files which you can find [here](https://github.com/ggml-org/llama.cpp). SmolVLM2 and its multimodal projector file are included by default in the Models -> Download Models tab. Both files are combined, meaning downloading "SmolVLM2" will also download its projector, but you can cancel either download if needed.
+- Vision support through multimodal models with their corresponding projector (mmproj) files which you can read more about [here](https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal.md).
 - Built-in camera (based on expo-camera) lets you capture pictures directly in the app and send them to models. Clicked pictures are saved to your gallery by default.
 
 ### Document Processing and RAG
@@ -48,6 +52,8 @@ If you want to support me and the development of this project, you can donate to
 
 ### Chat Experience
 - Messages support editing, regeneration, copy functionality and markdown rendering.
+- Fast native markdown rendering with math and LaTeX support powered by `react-native-nitro-markdown`, a C++ based renderer built on the Nitro Modules bridge.
+- Dedicated branching support on each chat bubble lets you fork the conversation from any message, preserving the original thread so you can explore alternate directions without losing prior context.
 - Code generated by models is rendered in codeblocks with clipboard copying functionality.
 - Chat history management with the ability to create, save, and organize conversations.
 - Real-time streaming responses for both local and remote models.
@@ -157,24 +163,28 @@ Read our [Contributing Guide](docs/CONTRIBUTING.md) for detailed contribution gu
 
 ## Acknowledgments
 
-- [llama.cpp](https://github.com/ggerganov/llama.cpp) - The default underlying engine for running local LLMs and it's the only one that's been implemented yet.
+- [llama.cpp](https://github.com/ggerganov/llama.cpp) - The underlying engine for running local GGUF models on both Android and iOS.
 - [inferrlm-llama.rn](https://github.com/sbhjt-gr/inferra-llama.rn) - The customized React Native adapter which provides the bridge for llama.cpp. Originally forked and self-hosted from [llama.rn](https://github.com/mybigday/llama.rn) for updating llama.cpp more frequently.
+- [react-native-nitro-mlx](https://github.com/sbhjt-gr/react-native-nitro-mlx) - Apple Silicon MLX inference engine for iOS, providing optimized on-device performance via the Nitro Modules bridge.
+- [react-native-nitro-markdown](https://github.com/sbhjt-gr/react-native-nitro-markdown) - Native C++ markdown renderer for React Native, used for chat message rendering.
 - [react-native-rag](https://github.com/software-mansion-labs/react-native-rag) + [@langchain/textsplitters](https://github.com/langchain-ai/langchainjs) - RAG implementation for React Native that powers the document retrieval and ingestion features using LangChain.
 - [react-native-ai](https://github.com/callstackincubator/ai) - Adaptor that provides Apple Foundation bridge from Swift to JavaScript.
 - If someone thinks they also need to be mentioned here, please let me know.
 
 ## Tech Stack
 
-- **React Native + Expo**: For cross-platform support.
-- **TypeScript**: The syntactical superset of JavaScript, widely used for React Development.
+- **React Native + Expo SDK 54**: For cross-platform iOS and Android support.
+- **TypeScript**: Strongly typed JavaScript for the entire codebase.
 - **Firebase**: For authentication, Firestore database, and cloud services.
-- **inferrlm-llama**: Custom llama.cpp bridge for local inference originally maintained by <a href="https://www.bricks.tools/" target="_blank">BRICS</a>.
+- **inferrlm-llama.rn**: Custom llama.cpp bridge for GGUF model inference on Android and iOS.
+- **react-native-nitro-mlx**: Apple Silicon MLX inference engine for iOS via Nitro Modules.
+- **react-native-nitro-markdown**: Native C++ markdown renderer for chat messages.
 - **React Navigation**: For navigation and routing.
-- **React Native Paper**: Used for many Material Design UI components, although the whole UI is not purely based on the Material design.
+- **React Native Paper**: Material Design UI components.
 - **React Native ML Kit**: For on-device text recognition and OCR.
 - **react-native-tcp-socket**: For HTTP server implementation and network communication.
 - **ESLint**: For code quality.
-- **Some Expo Modules**: For camera, file system, notifications, device APIs etc.
+- **Expo Modules**: For camera, file system, notifications, device APIs and more.
 
 ## Star History
 

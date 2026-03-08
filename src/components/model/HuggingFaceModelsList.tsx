@@ -11,7 +11,6 @@ interface HuggingFaceModelsListProps {
   isLoading: boolean;
   searchQuery: string;
   onModelPress: (model: HFModel) => void;
-  onModelDownload: (model: DownloadableModel) => void;
   isModelDownloaded: (modelId: string) => boolean;
   convertHfModelToDownloadable: (hfModel: HFModel) => DownloadableModel;
 }
@@ -21,7 +20,6 @@ export const HuggingFaceModelsList: React.FC<HuggingFaceModelsListProps> = ({
   isLoading,
   searchQuery,
   onModelPress,
-  onModelDownload,
   isModelDownloaded,
   convertHfModelToDownloadable
 }) => {
@@ -48,7 +46,8 @@ export const HuggingFaceModelsList: React.FC<HuggingFaceModelsListProps> = ({
               isDownloaded={isDownloaded}
               isDownloading={false}
               isInitializing={false}
-              onDownload={onModelDownload}
+              alwaysEnableDownload
+              onDownload={() => onModelPress(hfModel)}
               onPress={() => onModelPress(hfModel)}
             />
           );

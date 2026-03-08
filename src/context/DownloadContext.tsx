@@ -23,6 +23,8 @@ const DownloadContext = createContext<DownloadContextType | undefined>(undefined
 export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({});
   const isLoadedRef = useRef(false);
+  const cancelledRef = useRef<Set<string>>(new Set());
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const loadSavedStates = async () => {
@@ -56,6 +58,29 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         try {
           const taskDownloads = await modelDownloader.getActiveDownloadsList();
+          const activeNames = new Set(
+            taskDownloads
+              .filter(dl =>
+                dl.modelName &&
+                !dl.modelName.startsWith('com.inferra.transfer.') &&
+                dl.status !== 'completed' &&
+                dl.status !== 'failed' &&
+                dl.status !== 'cancelled'
+              )
+              .map(dl => dl.modelName)
+          );
+
+          /*
+            Remove any saved entry that no longer has a live native task.
+            These are stale entries from a previous session where the download
+            finished while the app was backgrounded.
+          */
+          Object.keys(merged).forEach(key => {
+            if (!activeNames.has(key)) {
+              delete merged[key];
+            }
+          });
+
           for (const dl of taskDownloads) {
             if (
               dl.modelName &&
@@ -119,6 +144,13 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         return newProgress;
       });
+      setTimeout(() => {
+        setDownloadProgress(prev => {
+          const next = { ...prev };
+          delete next[data.modelName];
+          return next;
+        });
+      }, 3000);
     };
 
     const handleDownloadFailed = (data: any) => {
@@ -136,12 +168,21 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
         return newProgress;
       });
+      setTimeout(() => {
+        setDownloadProgress(prev => {
+          const next = { ...prev };
+          delete next[data.modelName];
+          return next;
+        });
+      }, 3000);
     };
 
     const handleDownloadCancelled = (data: any) => {
       if (!data.modelName || data.modelName.startsWith('com.inferra.transfer.')) {
         return;
       }
+      cancelledRef.current.add(data.modelName);
+      setTimeout(() => cancelledRef.current.delete(data.modelName), 30000);
       setDownloadProgress(prev => {
         const newProgress = { ...prev };
         delete newProgress[data.modelName];
@@ -154,6 +195,9 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
       if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
+        return;
+      }
+      if (cancelledRef.current.has(data.modelName)) {
         return;
       }
       setDownloadProgress(prev => ({
@@ -186,7 +230,8 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     if (!isLoadedRef.current) return;
-    const saveStates = async () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
       try {
         if (Object.keys(downloadProgress).length > 0) {
           await AsyncStorage.setItem('download_progress', JSON.stringify(downloadProgress));
@@ -195,8 +240,7 @@ export const DownloadProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       } catch (error) {
       }
-    };
-    saveStates();
+    }, 500);
   }, [downloadProgress]);
 
   return (

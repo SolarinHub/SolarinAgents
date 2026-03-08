@@ -133,6 +133,10 @@ export const useUnifiedModelList = (
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    if (!query.trim()) {
+      setHfModels([]);
+      setShowingHfResults(false);
+    }
   };
 
   const handleSearchSubmit = () => {

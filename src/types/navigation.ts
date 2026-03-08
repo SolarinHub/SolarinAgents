@@ -32,6 +32,7 @@ export type RootStackParamList = {
     modelName: string;
     modelPath: string;
   };
+  ModelParameters: undefined;
   ServerLogs: undefined;
 };
 

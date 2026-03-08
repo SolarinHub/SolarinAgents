@@ -726,7 +726,8 @@ export default function ChatInput({
 
     if (!checkMultimodalSupport()) {
       const isOnlineModel = isOnlineProvider(selectedModelPath);
-      if (!isOnlineModel) {
+      const isMLX = engineService.getEngineForModel(selectedModelPath) === 'mlx';
+      if (!isOnlineModel && !isMLX) {
         showMmProjSelector('camera');
         return;
       }
@@ -760,7 +761,8 @@ export default function ChatInput({
         
         if (isImageFile(file.name) && !checkMultimodalSupport()) {
           const isOnlineModel = isOnlineProvider(selectedModelPath);
-          if (!isOnlineModel) {
+          const isMLX = engineService.getEngineForModel(selectedModelPath!) === 'mlx';
+          if (!isOnlineModel && !isMLX) {
             setPendingFileForMultimodal({
               uri: file.uri,
               name: file.name
@@ -901,7 +903,7 @@ export default function ChatInput({
             >
               <View style={styles.experimentalTag}>
                 <Text style={[styles.experimentalText, { color: isDark ? '#ffb74d' : '#f57c00' }]}>
-                  BETA
+                  EXPERIMENTAL
                 </Text>
               </View>
               

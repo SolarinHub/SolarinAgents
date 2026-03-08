@@ -246,6 +246,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     }
 
     if (isRemoteProvider(selectedModelPath)) {
+      if (!enableRemoteModels || !isLoggedIn) return;
       setActiveProvider(selectedModelPath as ProviderType);
       chatManager.setCurrentProvider(selectedModelPath as ProviderType);
       return;
@@ -256,7 +257,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       setActiveProvider('local');
       chatManager.setCurrentProvider('local');
     }
-  }, [activeProvider, selectedModelPath]);
+  }, [activeProvider, selectedModelPath, enableRemoteModels, isLoggedIn]);
 
   useEffect(() => {
     const handleLoadChat = async () => {

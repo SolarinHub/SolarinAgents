@@ -42,6 +42,7 @@ export type GenSettings = {
   xtcThreshold: number;
   typicalP: number;
   enableThinking: boolean;
+  systemPrompt: string;
 };
 
 export type GenOpts = {
