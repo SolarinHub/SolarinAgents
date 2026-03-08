@@ -130,7 +130,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [dialogSecondaryPress, setDialogSecondaryPress] = useState<(() => void) | undefined>(undefined);
 
   const hideDialog = () => {
-    console.log('[dialog] hide', { dialogLoading, dialogVisible, dialogTitle });
     setDialogVisible(false);
     setDialogLoading(false);
   };
@@ -144,7 +143,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     secondary?: BtnCfg,
     loading: boolean = false
   ) => {
-    console.log('[dialog] show', { title, loading, hasPrimary: !!primary, hasSecondary: !!secondary });
     setDialogTitle(title);
     setDialogMessage(message);
     setDialogLoading(loading);
@@ -487,12 +485,10 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     try {
       const dirInfo = await FileSystem.getInfoAsync(directory);
       if (!dirInfo.exists) {
-        console.log('[getDirectorySize] not_exists', directory);
         return 0;
       }
 
       const files = await FileSystem.readDirectoryAsync(directory);
-      console.log('[getDirectorySize] scanning', { directory, fileCount: files.length, depth });
       let totalSize = 0;
 
       for (const file of files) {
@@ -509,10 +505,8 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
         }
       }
 
-      console.log('[getDirectorySize] done', { directory, totalSize, depth });
       return totalSize;
     } catch (error) {
-      console.log('[getDirectorySize] error', { directory, error });
       return 0;
     }
   };
@@ -582,42 +576,32 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
     const modelsDir = `${FileSystem.documentDirectory}models`;
     const hfDir = `${FileSystem.documentDirectory}huggingface`;
 
-    console.log('[clearAllModels] start', { modelsDir, hfDir });
     showDialog('', '', undefined, undefined, true);
 
     try {
-      console.log('[clearAllModels] calculating_sizes');
       const [modelsSize, hfSize] = await Promise.all([
         getDirectorySize(modelsDir),
         getDirectorySize(hfDir),
       ]);
-      console.log('[clearAllModels] sizes_calculated', { modelsSize, hfSize });
       const totalSize = modelsSize + hfSize;
       const totalSizeText = formatBytes(totalSize);
 
       hideDialog();
       setTimeout(() => {
-        console.log('[clearAllModels] confirm_dialog_show');
         showDialog(
           'Clear All Models',
           `Are you sure you want to delete all models? This action cannot be undone.\n\nStorage to be freed: ${totalSizeText}`,
           {
             label: 'Delete',
             onPress: async () => {
-              console.log('[clearAllModels] confirm_delete_press');
               hideDialog();
               try {
-                console.log('[clearAllModels] deleting');
                 setClearingType('models');
                 await modelDownloader.clearAllModels();
-                console.log('[clearAllModels] models_cleared');
                 await modelSettingsService.clearAllSettings();
-                console.log('[clearAllModels] settings_cleared');
                 await loadStorageInfo();
-                console.log('[clearAllModels] storage_info_reloaded');
                 showDialog('Success', 'All models cleared successfully');
               } catch (error) {
-                console.log('[clearAllModels] delete_error', error);
                 showDialog('Error', 'Failed to clear models');
               } finally {
                 setClearingType(null);
@@ -627,14 +611,12 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           {
             label: 'Cancel',
             onPress: () => {
-              console.log('[clearAllModels] confirm_cancel_press');
               hideDialog();
             }
           }
         );
       }, 50);
     } catch (error) {
-      console.log('[clearAllModels] size_calc_error', error);
       hideDialog();
       showDialog('Error', 'Failed to clear models');
     }
