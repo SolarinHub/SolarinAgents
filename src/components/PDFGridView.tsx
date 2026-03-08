@@ -82,7 +82,12 @@ export default function PDFGridView({
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#fff' }]}>
         <View style={styles.header}>
           <Text 
             style={[
@@ -162,10 +167,6 @@ export default function PDFGridView({
           />
         </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
           <View style={[styles.gridFooter, { backgroundColor: isDark ? '#1a1a1a' : '#ffffff' }]}>
             {ragEnabled ? (
               <View style={styles.ragRow}>
@@ -241,8 +242,8 @@ export default function PDFGridView({
               </Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
