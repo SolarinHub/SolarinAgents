@@ -492,9 +492,13 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const loadStorageInfo = async () => {
     try {
       const cacheDir = FileSystem.cacheDirectory || '';
-      const cacheSize = await getDirectorySize(cacheDir);
+      const tempDir = `${FileSystem.documentDirectory}temp`;
+      const [cacheSize, tempSize] = await Promise.all([
+        getDirectorySize(cacheDir),
+        getDirectorySize(tempDir),
+      ]);
       setStorageInfo({
-        cacheSize: formatBytes(cacheSize)
+        cacheSize: formatBytes(cacheSize + tempSize)
       });
     } catch (error) {
     }
@@ -519,9 +523,11 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const clearCache = async () => {
     try {
       setClearingType('cache');
+      const tempDir = `${FileSystem.documentDirectory}temp`;
       if (FileSystem.cacheDirectory) {
         await clearDirectory(FileSystem.cacheDirectory);
       }
+      await clearDirectory(tempDir);
       await loadStorageInfo();
       showDialog('Success', 'Cache cleared successfully');
     } catch (error) {
