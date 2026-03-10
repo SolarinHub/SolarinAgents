@@ -111,14 +111,11 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       }
     }
     setShowStorageWarningDialog(false);
+    await new Promise(resolve => setTimeout(resolve, 500));
     await proceedWithImport();
   };
 
   const handleLinkModel = async (proceedWithImport: () => Promise<void>) => {
-    if (!isAndroid) {
-      await proceedWithImport();
-      return;
-    }
     try {
       const hideWarning = await AsyncStorage.getItem('hideStorageWarning');
       if (hideWarning !== 'true') {
