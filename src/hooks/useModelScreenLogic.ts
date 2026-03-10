@@ -131,14 +131,19 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
-        copyToCacheDirectory: false,
+        copyToCacheDirectory: true,
       });
 
       if (result.canceled) {
         return;
       }
 
-      const file = result.assets[0];
+      const file = result.assets?.[0];
+      if (!file?.uri || !file?.name) {
+        showDialog('Error', 'No valid file was selected. Please try again.');
+        return;
+      }
+
       const fileName = file.name.toLowerCase();
       const isGguf = fileName.endsWith('.gguf');
       const isSafe = fileName.endsWith('.safetensors');
@@ -164,7 +169,13 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       }
     } catch (error) {
       setIsLoading(false);
-      showDialog('Error', 'Could not open the file picker. Please ensure the app has storage permissions.');
+      const fallbackMessage = Platform.OS === 'ios'
+        ? 'Could not open the file picker. Please try again.'
+        : 'Could not open the file picker. Please ensure the app has storage permissions.';
+      const errorMessage = error instanceof Error && error.message
+        ? `${fallbackMessage}\n\nDetails: ${error.message}`
+        : fallbackMessage;
+      showDialog('Error', errorMessage);
     }
   };
 
