@@ -28,6 +28,7 @@ import { PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import { DialogProvider } from './src/context/DialogContext';
 import { ShowDialog } from './src/components/ShowDialog';
 import { initializeBindings } from './src/utils/llamaBinding';
+import UpdateScreen from './src/components/UpdateScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -259,6 +260,7 @@ export default function App() {
     'OpenSans-ExtraBold': require('./assets/fonts/OpenSans-ExtraBold.ttf'),
   });
   const [updateChecked, setUpdateChecked] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     async function checkUpdates() {
@@ -269,6 +271,8 @@ export default function App() {
       try {
         const update = await Updates.checkForUpdateAsync();
         if (update.isAvailable) {
+          setUpdateChecked(true);
+          setIsUpdating(true);
           await Updates.fetchUpdateAsync();
           await Updates.reloadAsync();
           return;
@@ -284,6 +288,10 @@ export default function App() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError, updateChecked]);
+
+  if (isUpdating) {
+    return <UpdateScreen />;
+  }
 
   useEffect(() => {
     if (fontsLoaded) {
