@@ -4,7 +4,7 @@
   from the Model Settings section on the Settings screen.
 */
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Text } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Text, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -155,7 +155,8 @@ export default function ModelParametersScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <AppHeader         title="AI Content Terms"
+      <AppHeader         
+      title="AI Content Terms"
               leftComponent={
                 <TouchableOpacity
                   style={styles.backButton}
@@ -182,7 +183,9 @@ export default function ModelParametersScreen({ navigation }: Props) {
             color={currentTheme === 'dark' ? '#FFB300' : '#E65100'}
           />
           <Text style={[styles.noticeText, { color: currentTheme === 'dark' ? '#FFB300' : '#E65100' }]}>
-            These settings apply to local models only and have no effect on Apple Intelligence or remote/cloud models.
+            {Platform.OS === 'android'
+              ? 'These settings do not apply to remote/cloud models.'
+              : 'These settings do not apply to Apple Intelligence or remote/cloud models.'}
           </Text>
         </View>
 
