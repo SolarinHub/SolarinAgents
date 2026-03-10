@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import SettingSlider from '../SettingSlider';
-import { featureCaps } from '../../services/feature-availability';
 
 type ModelSettings = {
   mirostat: number;
@@ -16,7 +15,7 @@ type ModelSettingsMirostatProps = {
   defaultSettings: Partial<ModelSettings>;
   onSettingsChange: (settings: Partial<ModelSettings>) => void;
   onDialogOpen: (config: any) => void;
-  activeEngine?: 'llama' | 'mlx';
+  showMlxWarning?: boolean;
 };
 
 const ModelSettingsMirostat = ({
@@ -24,12 +23,10 @@ const ModelSettingsMirostat = ({
   defaultSettings,
   onSettingsChange,
   onDialogOpen,
-  activeEngine,
+  showMlxWarning,
 }: ModelSettingsMirostatProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
 
   return (
     <>
@@ -46,7 +43,7 @@ const ModelSettingsMirostat = ({
         maximumValue={2}
         step={1}
         description="Enable advanced creativity control. 0=disabled, 1=Mirostat, 2=Mirostat 2.0 (smoother)."
-        warningText={!caps.mirostat ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'mirostat',
           label: 'Mirostat Mode',
@@ -67,7 +64,7 @@ const ModelSettingsMirostat = ({
         maximumValue={10}
         step={0.1}
         description="Target creativity level for Mirostat. Higher values allow more diverse responses."
-        warningText={!caps.mirostat ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'mirostatTau',
           label: 'Mirostat Tau',
@@ -88,7 +85,7 @@ const ModelSettingsMirostat = ({
         maximumValue={1}
         step={0.01}
         description="How quickly Mirostat adjusts creativity. Higher values mean faster adjustments."
-        warningText={!caps.mirostat ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'mirostatEta',
           label: 'Mirostat Eta',

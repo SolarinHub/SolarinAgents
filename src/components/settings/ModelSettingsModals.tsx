@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, ScrollView, useWindowDimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { featureCaps } from '../../services/feature-availability';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 
@@ -37,7 +36,7 @@ type ModelSettingsModalsProps = {
   setTempLogitBias: (value: string) => void;
   tempDrySequenceBreakers: string;
   setTempDrySequenceBreakers: (value: string) => void;
-  activeEngine?: 'llama' | 'mlx';
+  showMlxWarning?: boolean;
 };
 
 const isStringDifferent = (current: string, defaultValue: string): boolean => {
@@ -68,15 +67,13 @@ const ModelSettingsModals = ({
   setTempLogitBias,
   tempDrySequenceBreakers,
   setTempDrySequenceBreakers,
-  activeEngine,
+  showMlxWarning,
 }: ModelSettingsModalsProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const { width, height } = useWindowDimensions();
   const modalWidth = Math.min(width - 48, 560);
   const sheetMaxHeight = height * 0.8;
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
 
   return (
     <>
@@ -99,7 +96,7 @@ const ModelSettingsModals = ({
               Define grammar rules in BNF format to constrain the model's output structure. Leave empty to disable grammar constraints.
             </Text>
 
-            {!caps.grammar && (
+            {showMlxWarning && (
               <View style={styles.unsupportedBanner}>
                 <MaterialCommunityIcons name="alert" size={16} color="#FF9500" />
                 <Text style={styles.unsupportedBannerText}>Unsupported on MLX — changes will have no effect</Text>
@@ -166,7 +163,7 @@ const ModelSettingsModals = ({
               Set random number generator seed for reproducible results. Use -1 for random seed each time.
             </Text>
 
-            {activeEngine === 'mlx' && (
+            {showMlxWarning && (
               <View style={styles.unsupportedBanner}>
                 <MaterialCommunityIcons name="alert" size={16} color="#FF9500" />
                 <Text style={styles.unsupportedBannerText}>Unsupported on MLX — changes will have no effect</Text>
@@ -230,7 +227,7 @@ const ModelSettingsModals = ({
               Number of most likely tokens to show probability scores for. Set to 0 to disable probability display.
             </Text>
 
-            {activeEngine === 'mlx' && (
+            {showMlxWarning && (
               <View style={styles.unsupportedBanner}>
                 <MaterialCommunityIcons name="alert" size={16} color="#FF9500" />
                 <Text style={styles.unsupportedBannerText}>Unsupported on MLX — changes will have no effect</Text>
@@ -294,7 +291,7 @@ const ModelSettingsModals = ({
               Influence how likely specific tokens are to appear. Format: [token_id, bias] per line. Example: "123, 0.5" to make token 123 more likely.
             </Text>
 
-            {activeEngine === 'mlx' && (
+            {showMlxWarning && (
               <View style={styles.unsupportedBanner}>
                 <MaterialCommunityIcons name="alert" size={16} color="#FF9500" />
                 <Text style={styles.unsupportedBannerText}>Unsupported on MLX — changes will have no effect</Text>
@@ -371,7 +368,7 @@ const ModelSettingsModals = ({
               Enter symbols that reset the repetition checker in DRY mode. Each symbol should be on a new line.
             </Text>
 
-            {!caps.dry && (
+            {showMlxWarning && (
               <View style={styles.unsupportedBanner}>
                 <MaterialCommunityIcons name="alert" size={16} color="#FF9500" />
                 <Text style={styles.unsupportedBannerText}>Unsupported on MLX — changes will have no effect</Text>

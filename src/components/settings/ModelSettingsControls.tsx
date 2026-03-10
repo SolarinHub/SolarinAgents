@@ -3,7 +3,6 @@ import { StyleSheet, Text, TouchableOpacity, View, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
-import { featureCaps } from '../../services/feature-availability';
 
 type ModelSettings = {
   stopWords: string[];
@@ -18,7 +17,7 @@ type ModelSettingsControlsProps = {
   onSettingsChange: (settings: Partial<ModelSettings>) => void;
   onStopWordsPress: () => void;
   onGrammarDialogOpen: () => void;
-  activeEngine?: 'llama' | 'mlx';
+  showMlxWarning?: boolean;
 };
 
 const isStringDifferent = (current: string, defaultValue: string): boolean => {
@@ -38,13 +37,11 @@ const ModelSettingsControls = ({
   onSettingsChange,
   onStopWordsPress,
   onGrammarDialogOpen,
-  activeEngine,
+  showMlxWarning,
 }: ModelSettingsControlsProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const iconColor = currentTheme === 'dark' ? '#FFFFFF' : themeColors.primary;
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
 
   return (
     <>
@@ -102,7 +99,7 @@ const ModelSettingsControls = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Enable Jinja templating for chat formatting. Better compatibility with modern models.
             </Text>
-            {!caps.jinja && (
+            {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
             {(modelSettings.jinja ?? false) !== (defaultSettings.jinja ?? false) && (
@@ -144,7 +141,7 @@ const ModelSettingsControls = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Enforce specific grammar rules to ensure generated text follows a particular structure.
             </Text>
-            {!caps.grammar && (
+            {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
             {defaultSettings.grammar !== undefined && isStringDifferent(modelSettings.grammar, defaultSettings.grammar) && (

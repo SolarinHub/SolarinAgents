@@ -4,7 +4,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import SettingSlider from '../SettingSlider';
-import { featureCaps } from '../../services/feature-availability';
 
 type ModelSettings = {
   maxTokens: number;
@@ -24,7 +23,7 @@ type ModelSettingsSamplingProps = {
   onSettingsChange: (settings: Partial<ModelSettings>) => void;
   onMaxTokensPress: () => void;
   onDialogOpen: (config: any) => void;
-  activeEngine?: 'llama' | 'mlx';
+  showMlxWarning?: boolean;
 };
 
 const ModelSettingsSampling = ({
@@ -34,13 +33,11 @@ const ModelSettingsSampling = ({
   onSettingsChange,
   onMaxTokensPress,
   onDialogOpen,
-  activeEngine,
+  showMlxWarning,
 }: ModelSettingsSamplingProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const iconColor = currentTheme === 'dark' ? '#FFFFFF' : themeColors.primary;
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
 
   return (
     <>
@@ -180,7 +177,7 @@ const ModelSettingsSampling = ({
         maximumValue={1}
         step={0.01}
         description="Chance for token removal via XTC sampler. 0 disables XTC sampling."
-        warningText={!caps.xtc ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'xtcProbability',
           label: 'XTC Probability',
@@ -201,7 +198,7 @@ const ModelSettingsSampling = ({
         maximumValue={1}
         step={0.01}
         description="Minimum probability threshold for XTC removal. Values > 0.5 disable XTC."
-        warningText={!caps.xtc ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'xtcThreshold',
           label: 'XTC Threshold',

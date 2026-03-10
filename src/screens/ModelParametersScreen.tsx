@@ -12,9 +12,7 @@ import { RootStackParamList } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { theme } from '../constants/theme';
 import { llamaManager } from '../utils/LlamaManager';
-import { engineService } from '../services/inference-engine-service';
 import { DEFAULT_SETTINGS } from '../config/llamaConfig';
-import { featureCaps } from '../services/feature-availability';
 import type { ModelSettings } from '../services/ModelSettingsService';
 import AppHeader from '../components/AppHeader';
 import ModelSettingDialog from '../components/ModelSettingDialog';
@@ -52,10 +50,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
     llamaManager.getSettings(),
   );
   const [error, setError] = useState<string | null>(null);
-  const [activeEngine, setActiveEngine] = useState<'llama' | 'mlx'>('llama');
-
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
+  const showMlxWarning = Platform.OS === 'ios';
 
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -82,16 +77,8 @@ export default function ModelParametersScreen({ navigation }: Props) {
   useFocusEffect(
     React.useCallback(() => {
       setSettings(llamaManager.getSettings());
-      loadEngine();
     }, []),
   );
-
-  const loadEngine = async () => {
-    try {
-      const { active } = await engineService.load();
-      setActiveEngine(active);
-    } catch (_) {}
-  };
 
   const getDefault = (key?: ModelSettingKey): number | undefined => {
     if (!key) return undefined;
@@ -196,7 +183,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
           onSettingsChange={handleChange}
           onMaxTokensPress={handleMaxTokens}
           onDialogOpen={handleOpenDialog}
-          activeEngine={activeEngine}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsControls
@@ -208,7 +195,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
             setTempGrammar(settings.grammar);
             setShowGrammarDialog(true);
           }}
-          activeEngine={activeEngine}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsPenalties
@@ -223,7 +210,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
           defaultSettings={DEFAULT_SETTINGS}
           onSettingsChange={handleChange}
           onDialogOpen={handleOpenDialog}
-          activeEngine={activeEngine}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsDry
@@ -235,14 +222,14 @@ export default function ModelParametersScreen({ navigation }: Props) {
             setTempDrySeq((settings.drySequenceBreakers || []).join('\n'));
             setShowDrySeqDialog(true);
           }}
-          activeEngine={activeEngine}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsAdvanced
           modelSettings={settings}
           defaultSettings={DEFAULT_SETTINGS}
           onSettingsChange={handleChange}
-          activeEngine={activeEngine}
+          showMlxWarning={showMlxWarning}
           onNProbsDialogOpen={() => {
             setTempNProbs((settings.nProbs ?? 0).toString());
             setShowNProbsDialog(true);
@@ -265,7 +252,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
         modelSettings={settings}
         defaultSettings={DEFAULT_SETTINGS}
         onSettingsChange={handleChange}
-        activeEngine={activeEngine}
+        showMlxWarning={showMlxWarning}
         showGrammarDialog={showGrammarDialog}
         setShowGrammarDialog={setShowGrammarDialog}
         showSeedDialog={showSeedDialog}

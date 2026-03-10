@@ -18,7 +18,7 @@ type ModelSettingsAdvancedProps = {
   onNProbsDialogOpen: () => void;
   onSeedDialogOpen: () => void;
   onLogitBiasDialogOpen: () => void;
-  activeEngine?: 'llama' | 'mlx';
+  showMlxWarning?: boolean;
 };
 
 const ModelSettingsAdvanced = ({
@@ -28,12 +28,11 @@ const ModelSettingsAdvanced = ({
   onNProbsDialogOpen,
   onSeedDialogOpen,
   onLogitBiasDialogOpen,
-  activeEngine,
+  showMlxWarning,
 }: ModelSettingsAdvancedProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const iconColor = currentTheme === 'dark' ? '#FFFFFF' : themeColors.primary;
-  const isMlx = activeEngine === 'mlx';
 
   return (
     <>
@@ -61,7 +60,7 @@ const ModelSettingsAdvanced = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Show probability scores for alternative words. 0 disables, higher values show more alternatives.
             </Text>
-            {isMlx && (
+            {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
             {(modelSettings.nProbs ?? 0) !== (defaultSettings.nProbs ?? 0) && (
@@ -98,7 +97,7 @@ const ModelSettingsAdvanced = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Set random number generator seed for reproducible results. -1 for random seed.
             </Text>
-            {isMlx && (
+            {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
             {(modelSettings.seed ?? -1) !== (defaultSettings.seed ?? -1) && (
@@ -170,7 +169,7 @@ const ModelSettingsAdvanced = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Influence how likely specific words are to appear in the response.
             </Text>
-            {isMlx && (
+            {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
             {(JSON.stringify(modelSettings.logitBias || []) !== JSON.stringify(defaultSettings.logitBias || [])) && (

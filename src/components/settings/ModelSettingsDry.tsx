@@ -4,7 +4,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
 import SettingSlider from '../SettingSlider';
-import { featureCaps } from '../../services/feature-availability';
 
 type ModelSettings = {
   dryMultiplier: number;
@@ -20,7 +19,7 @@ type ModelSettingsDryProps = {
   onSettingsChange: (settings: Partial<ModelSettings>) => void;
   onDialogOpen: (config: any) => void;
   onDrySequenceBreakersDialogOpen: () => void;
-  activeEngine?: 'llama' | 'mlx';
+  showMlxWarning?: boolean;
 };
 
 const isArrayDifferent = (current: any[] | undefined, defaultValue: any[] | undefined): boolean => {
@@ -36,13 +35,11 @@ const ModelSettingsDry = ({
   onSettingsChange,
   onDialogOpen,
   onDrySequenceBreakersDialogOpen,
-  activeEngine,
+  showMlxWarning,
 }: ModelSettingsDryProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const iconColor = currentTheme === 'dark' ? '#FFFFFF' : themeColors.primary;
-  const engineKey = activeEngine === 'mlx' ? 'mlx' : 'llama';
-  const caps = featureCaps[engineKey];
 
   return (
     <>
@@ -59,7 +56,7 @@ const ModelSettingsDry = ({
         maximumValue={5}
         step={0.1}
         description="Strength of DRY feature. Higher values strongly prevent repetition. 0 disables DRY."
-        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryMultiplier',
           label: 'DRY Multiplier',
@@ -80,7 +77,7 @@ const ModelSettingsDry = ({
         maximumValue={4}
         step={0.05}
         description="Base penalty for repetition in DRY mode. Higher values are more aggressive."
-        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryBase',
           label: 'DRY Base',
@@ -101,7 +98,7 @@ const ModelSettingsDry = ({
         maximumValue={20}
         step={1}
         description="How many words can repeat before DRY penalty kicks in."
-        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryAllowedLength',
           label: 'DRY Allowed Length',
@@ -122,7 +119,7 @@ const ModelSettingsDry = ({
         maximumValue={512}
         step={1}
         description="How far back to look for repetition in DRY mode. -1 uses context size."
-        warningText={!caps.dry ? 'Unsupported on MLX' : undefined}
+        warningText={showMlxWarning ? 'Unsupported on MLX' : undefined}
         onPressChange={() => onDialogOpen({
           key: 'dryPenaltyLastN',
           label: 'DRY Penalty Last N',
@@ -154,7 +151,7 @@ const ModelSettingsDry = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Symbols that reset the repetition checker in DRY mode.
             </Text>
-            {!caps.dry && (
+            {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
             {isArrayDifferent(modelSettings.drySequenceBreakers, defaultSettings.drySequenceBreakers) && (
