@@ -30,6 +30,7 @@ import { getHTTPStatusText } from './tcp/http/httpStatus';
 import { handleCopyRequest, handleTagsRequest, handlePullRequest, handleDeleteRequest, handlePsRequest } from './tcp/http/modelOperations';
 import { sendChunkedResponseStart, writeChunk, endChunkedResponse } from './tcp/http/responseUtils';
 import { getFileSize, findStoredModel } from './tcp/http/modelUtils';
+import { handleOpenAIChatCompletions, handleOpenAIModels } from './tcp/http/openaiHandler';
 
 interface ServerStatus {
   isRunning: boolean;
@@ -389,7 +390,7 @@ export class TCPServer {
     if (method === 'OPTIONS') {
       this.sendHTTPResponse(socket, 204, {
         'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }, '');
       logger.logWebRequest(method, path, 204);
       return;
@@ -522,6 +523,29 @@ export class TCPServer {
       const version = (Constants.expoConfig && Constants.expoConfig.version) || (Constants.manifest as any)?.version || 'unknown';
       this.sendJSONResponse(socket, 200, { version });
       logger.logWebRequest(method, path, 200);
+      return;
+    }
+
+    if (method === 'POST' && path === '/v1/chat/completions') {
+      await handleOpenAIChatCompletions(
+        body,
+        socket,
+        method,
+        path,
+        this.ensureModelLoaded.bind(this),
+        this.parseHttpError.bind(this),
+        this.sendJSONResponse.bind(this)
+      );
+      return;
+    }
+
+    if (method === 'GET' && path === '/v1/models') {
+      await handleOpenAIModels(
+        socket,
+        method,
+        path,
+        this.sendJSONResponse.bind(this)
+      );
       return;
     }
 
