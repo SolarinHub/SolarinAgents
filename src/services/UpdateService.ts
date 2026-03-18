@@ -85,6 +85,10 @@ function getUpdateId(manifest: any): string {
   return manifest?.id || '';
 }
 
+function isAutoUpdate(manifest: any): boolean {
+  return manifest?.extra?.expoClient?.extra?.autoUpdate === true;
+}
+
 export const updateService = {
   getOpenCount,
   incrementOpenCount,
@@ -96,4 +100,5 @@ export const updateService = {
   fetchAndReload,
   getChangelog,
   getUpdateId,
+  isAutoUpdate,
 };
