@@ -97,6 +97,11 @@ export default {
       ]
     },
     extra: {
+      changelog: [
+        "OpenAI-compatible API endpoints (/v1/chat/completions, /v1/models)",
+        "Fixed connection issues with PC clients",
+        "Improved server stability and error handling",
+      ],
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
