@@ -7,11 +7,16 @@ node_modules/
 .vscode/
 .idea/
 
+# Native folders
+android/
+ios/
+
 # Build artifacts
 dist/
 web-build/
 build/
 /android/.gradle
+coverage/
 
 # Source control
 .git/
@@ -22,6 +27,7 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 .metro-health-check*
+logs.txt
 
 # Documentation and other non-essential files
 __tests__/
@@ -34,8 +40,10 @@ tests/
 *.spec.tsx
 *.md
 LICENSE
-CHANGELOG.md
 docs/
+
+# Scripts (dev/migration utilities)
+scripts/
 
 # Development assets
 *.orig
