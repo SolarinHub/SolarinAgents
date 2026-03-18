@@ -13,7 +13,7 @@ export default {
     newArchEnabled: true,
     updates: {
       enabled: true,
-      checkAutomatically: 'ON_LOAD',
+      checkAutomatically: 'NEVER',
       url: "https://u.expo.dev/a539a082-58a3-4f29-9bb7-107913124e7d"
     },
     assetBundlePatterns: [
