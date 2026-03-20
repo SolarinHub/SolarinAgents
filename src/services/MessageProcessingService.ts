@@ -574,7 +574,7 @@ export class MessageProcessingService {
         } else if (normalized.includes('locale') || normalized.includes('language')) {
           displayMessage = 'Apple Intelligence language/locale not supported. Try using English locale.';
         } else if (!normalized.includes('not available')) {
-          displayMessage = `Apple Intelligence error: ${message}`;
+          displayMessage = 'Apple Intelligence encountered an error. Please try again.';
         }
         await chatManager.updateMessageContent(
           messageId,
