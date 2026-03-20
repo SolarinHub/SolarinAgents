@@ -797,9 +797,9 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     }, [modalVisible]);
 
     const badgeConfig = getConnectionBadgeConfig(selectedModelPath, currentTheme);
-    const initBadgeBg = currentTheme === 'dark' ? 'rgba(156,56,192,0.25)' : 'rgba(74,6,96,0.1)';
+    const initBadgeBg = currentTheme === 'dark' ? 'rgba(192,96,224,0.4)' : 'rgba(74,6,96,0.1)';
     const initBadgeColor = getThemeAwareColor('#4a0660', currentTheme);
-    const initDividerBg = currentTheme === 'dark' ? 'rgba(156,56,192,0.2)' : 'rgba(74,6,96,0.1)';
+    const initDividerBg = currentTheme === 'dark' ? 'rgba(192,96,224,0.3)' : 'rgba(74,6,96,0.1)';
 
     return (
       <>
@@ -972,7 +972,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                 stickySectionHeadersEnabled={true}
                 ListHeaderComponent={
                   <View>
-                    <View style={[styles.initPanel, { backgroundColor: currentTheme === 'dark' ? 'rgba(74,6,96,0.08)' : 'rgba(74,6,96,0.03)', borderColor: currentTheme === 'dark' ? 'rgba(156,56,192,0.2)' : 'rgba(74,6,96,0.12)' }]}>
+                    <View style={[styles.initPanel, { backgroundColor: currentTheme === 'dark' ? 'rgba(192,96,224,0.12)' : 'rgba(74,6,96,0.03)', borderColor: currentTheme === 'dark' ? 'rgba(192,96,224,0.3)' : 'rgba(74,6,96,0.12)' }]}>
                       <TouchableOpacity
                         style={styles.initPanelToggle}
                         onPress={() => setShowInitPanel(v => !v)}
