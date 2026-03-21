@@ -585,21 +585,25 @@ export default function ChatView({
             </View>
           )}
 
-          {item.role === 'assistant' && stats ? (
+          {item.role === 'assistant' && stats ? (() => {
+            const isReasoning = isCurrentlyStreaming && (stats?.tokens ?? 0) === 0;
+            return (
             <View style={styles.statsContainer}>
               <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <MaterialCommunityIcons 
-                    name="text-box-outline" 
-                    size={12} 
-                    color={themeColors.secondaryText}
-                    style={styles.statIcon}
-                  />
-                  <Text style={[styles.statsText, { color: themeColors.secondaryText }]}>
-                    {`${(stats?.tokens ?? 0).toLocaleString()} tokens`}
-                  </Text>
-                </View>
-                {stats?.duration && stats.duration > 0 ? (
+                {!isReasoning ? (
+                  <View style={styles.statItem}>
+                    <MaterialCommunityIcons 
+                      name="text-box-outline" 
+                      size={12} 
+                      color={themeColors.secondaryText}
+                      style={styles.statIcon}
+                    />
+                    <Text style={[styles.statsText, { color: themeColors.secondaryText }]}>
+                      {`${(stats?.tokens ?? 0).toLocaleString()} tokens`}
+                    </Text>
+                  </View>
+                ) : null}
+                {!isReasoning && stats?.duration && stats.duration > 0 ? (
                   <View style={[styles.statItem, { marginLeft: 8 }]}>
                     <MaterialCommunityIcons 
                       name="speedometer" 
@@ -613,7 +617,7 @@ export default function ChatView({
                   </View>
                 ) : null}
                 {stats?.duration && stats.duration > 0 ? (
-                  <View style={[styles.statItem, { marginLeft: 8 }]}>
+                  <View style={[styles.statItem, !isReasoning ? { marginLeft: 8 } : undefined]}>
                     <MaterialCommunityIcons 
                       name="clock-outline" 
                       size={12} 
@@ -627,6 +631,7 @@ export default function ChatView({
                 ) : null}
               </View>
               
+              {!isReasoning ? (
               <View style={styles.statsRow}>
                 {stats?.firstTokenTime && stats.firstTokenTime > 0 ? (
                   <View style={styles.statItem}>
@@ -709,8 +714,10 @@ export default function ChatView({
                   </TouchableOpacity>
                 ) : null}
               </View>
+              ) : null}
             </View>
-          ) : null}
+            );
+          })() : null}
         </View>
 
         {item.role === 'user' && branchInfo && branchInfo.total > 1 ? (
