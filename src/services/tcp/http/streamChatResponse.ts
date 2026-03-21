@@ -33,12 +33,15 @@ export function createStreamChatResponse(context: StreamContext) {
     }
 
     const started = Date.now();
+    const streamId = `stream-${started}-${Math.random().toString(36).slice(2, 6)}`;
+    logger.startStream(streamId, model.name, path, messages);
 
     try {
       const full = await engineService.mgr().gen(
         messages as any,
         {
           onToken: (token: string) => {
+            logger.appendStreamToken(streamId, token);
             try {
               context.writeChunk(socket, {
                 model: model.name,
@@ -60,15 +63,7 @@ export function createStreamChatResponse(context: StreamContext) {
 
       const duration = Date.now() - started;
 
-      logger.logInference({
-        model: model.name,
-        endpoint: path,
-        messages,
-        stream: true,
-        response: typeof full === 'string' ? full : String(full),
-        duration,
-        status: 200,
-      });
+      logger.endStream(streamId, duration, 200);
 
       context.writeChunk(socket, {
         model: model.name,

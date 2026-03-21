@@ -125,10 +125,13 @@ async function streamAppleResponse(
 
   let full = '';
   const begun = Date.now();
+  const appleStreamId = `stream-${begun}-${Math.random().toString(36).slice(2, 6)}`;
+  logger.startStream(appleStreamId, 'apple-foundation', path, messages);
 
   try {
     for await (const chunk of appleFoundationService.streamResponse(mapped, options)) {
       full += chunk;
+      logger.appendStreamToken(appleStreamId, chunk);
       try {
         writeChunk(socket, {
           model: 'apple-foundation',
@@ -154,6 +157,7 @@ async function streamAppleResponse(
       output: full,
     });
     endChunkedResponse(socket);
+    logger.endStream(appleStreamId, Date.now() - begun, 200);
     logger.logWebRequest(method, path, 200);
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'generation_failed';
@@ -206,10 +210,13 @@ async function streamRemoteResponse(
   const options = buildRemoteOptions(true, settings);
   let full = '';
   const begun = Date.now();
+  const remoteStreamId = `stream-${begun}-${Math.random().toString(36).slice(2, 6)}`;
+  logger.startStream(remoteStreamId, provider, path, messages);
 
   try {
     await sendRemoteMessage(provider, mapped, options, token => {
       full += token;
+      logger.appendStreamToken(remoteStreamId, token);
       try {
         writeChunk(socket, {
           model: provider,
@@ -235,6 +242,7 @@ async function streamRemoteResponse(
       output: full,
     });
     endChunkedResponse(socket);
+    logger.endStream(remoteStreamId, Date.now() - begun, 200);
     logger.logWebRequest(method, path, 200);
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'generation_failed';

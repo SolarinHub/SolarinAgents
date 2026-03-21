@@ -129,8 +129,13 @@ async function streamAppleSSE(
     return;
   }
 
+  const appleSSEStreamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const appleSSEBegun = Date.now();
+  logger.startStream(appleSSEStreamId, 'apple-foundation', path, messages);
+
   try {
     for await (const chunk of appleFoundationService.streamResponse(mapped, options)) {
+      logger.appendStreamToken(appleSSEStreamId, chunk);
       try {
         writeSSEEvent(socket, buildSSEChunk(id, 'apple-foundation', chunk, null));
       } catch {
@@ -140,6 +145,7 @@ async function streamAppleSSE(
     }
     writeSSEEvent(socket, buildSSEChunk(id, 'apple-foundation', '', 'stop'));
     endSSEStream(socket);
+    logger.endStream(appleSSEStreamId, Date.now() - appleSSEBegun, 200);
     logger.logWebRequest(method, path, 200);
   } catch {
     try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
@@ -173,6 +179,10 @@ async function streamRemoteSSE(
     streamTokens: true,
   };
 
+  const remoteSSEStreamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const remoteSSEBegun = Date.now();
+  logger.startStream(remoteSSEStreamId, provider, path, messages);
+
   try {
     const sendFn = provider === 'gemini'
       ? onlineModelService.sendMessageToGemini.bind(onlineModelService)
@@ -181,6 +191,7 @@ async function streamRemoteSSE(
         : onlineModelService.sendMessageToClaude.bind(onlineModelService);
 
     await sendFn(mapped, options, (token: string) => {
+      logger.appendStreamToken(remoteSSEStreamId, token);
       try {
         writeSSEEvent(socket, buildSSEChunk(id, provider, token, null));
       } catch { return false; }
@@ -189,6 +200,7 @@ async function streamRemoteSSE(
 
     writeSSEEvent(socket, buildSSEChunk(id, provider, '', 'stop'));
     endSSEStream(socket);
+    logger.endStream(remoteSSEStreamId, Date.now() - remoteSSEBegun, 200);
     logger.logWebRequest(method, path, 200);
   } catch {
     try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
@@ -316,11 +328,16 @@ export async function handleOpenAIChatCompletions(
       return;
     }
 
+    const localSSEStreamId = `stream-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const localSSEBegun = Date.now();
+    logger.startStream(localSSEStreamId, target.model.name, path, parsed.messages);
+
     try {
       await engineService.mgr().gen(
         parsed.messages as any,
         {
           onToken: (token: string) => {
+            logger.appendStreamToken(localSSEStreamId, token);
             try {
               writeSSEEvent(socket, buildSSEChunk(id, target.model.name, token, null));
             } catch { return false; }
@@ -331,6 +348,7 @@ export async function handleOpenAIChatCompletions(
       );
       writeSSEEvent(socket, buildSSEChunk(id, target.model.name, '', 'stop'));
       endSSEStream(socket);
+      logger.endStream(localSSEStreamId, Date.now() - localSSEBegun, 200);
       logger.logWebRequest(method, path, 200);
     } catch {
       try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
