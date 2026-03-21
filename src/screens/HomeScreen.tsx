@@ -421,6 +421,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     }
     
     if (activeProvider === 'local') {
+      engineService.stop();
       try {
         await llamaManager.stopCompletion();
       } catch (error) {
@@ -467,6 +468,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       cancelGenerationRef.current = true;
       
       if (activeProvider === 'local') {
+        engineService.stop();
         try {
           await llamaManager.stopCompletion();
         } catch (error) {
@@ -650,6 +652,8 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
 
   const startNewChat = async () => {
     try {
+      cancelGenerationRef.current = true;
+      engineService.stop();
       resetStreamingState();
       await ChatLifecycleService.startNewChat({ setChat, setMessages });
     } catch (error) {
