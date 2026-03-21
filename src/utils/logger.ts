@@ -119,7 +119,6 @@ class ServerLogger {
     const entry = this.logEntries[idx];
     if (entry.metadata) {
       entry.metadata.response = (entry.metadata.response || '') + token;
-      entry.timestamp = Date.now();
     }
   }
 
