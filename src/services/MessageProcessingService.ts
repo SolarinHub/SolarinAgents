@@ -630,7 +630,7 @@ export class MessageProcessingService {
     let updateCounter = 0;
 
     console.log('local_model_start', { messageId, skipRag, msgCount: processedMessages.length });
-    console.log('local_model_settings', { systemPrompt: settings.systemPrompt?.substring(0, 100), temperature: settings.temperature, maxTokens: settings.maxTokens });
+    console.log('local_model_settings', { systemPrompt: settings.systemPrompt, temperature: settings.temperature, maxTokens: settings.maxTokens });
 
     const streamCallback = (token: string) => {
       if (this.cancelGenerationRef.current) {
@@ -740,7 +740,7 @@ export class MessageProcessingService {
 
     console.log('local_base_messages_dump:');
     baseMessages.forEach((msg, i) => {
-      console.log(`  base[${i}:${msg.role}] ${msg.content.substring(0, 200)}`);
+      console.log(`  base[${i}:${msg.role}] ${msg.content}`);
     });
 
     let usedRAG = false;
@@ -783,9 +783,9 @@ export class MessageProcessingService {
     }
 
     console.log('local_model_done', { tokenCount, responseLength: fullResponse.length, thinkingLength: thinking.length, cancelled: this.cancelGenerationRef.current });
-    console.log('local_response_preview:', fullResponse.substring(0, 300));
+    console.log('local_response:', fullResponse);
     if (thinking) {
-      console.log('local_thinking_preview:', thinking.substring(0, 200));
+      console.log('local_thinking:', thinking);
     }
 
     if (!this.cancelGenerationRef.current) {
