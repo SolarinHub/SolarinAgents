@@ -225,7 +225,16 @@ class MlxManager implements InferenceManager {
       console.log(`  [${i}:${msg.role}] ${content}`);
     });
 
-    if (opts?.settings?.systemPrompt !== undefined) {
+    /*
+     Set system prompt from the actual first message (which
+     MessageProcessingService builds), not from the settings
+     field which can be empty.
+    */
+    const firstMsg = messages[0];
+    if (firstMsg?.role === 'system') {
+      const sysContent = typeof firstMsg.content === 'string' ? firstMsg.content : '';
+      LLM.systemPrompt = sysContent;
+    } else if (opts?.settings?.systemPrompt !== undefined) {
       LLM.systemPrompt = opts.settings.systemPrompt;
     }
     if (opts?.settings?.maxTokens !== undefined) {
@@ -240,11 +249,21 @@ class MlxManager implements InferenceManager {
 
     console.log('mlx_gen_params', { systemPrompt: LLM.systemPrompt, maxTokens: LLM.maxTokens, temperature: LLM.temperature, enableThinking: LLM.enableThinking });
 
+    /*
+     The native side accumulates history via manageHistory:true.
+     Only clear when starting a fresh conversation (TS sends just
+     system + first user). For follow-up turns the native history
+     already contains previous exchanges.
+    */
+    const nonSystemMsgs = firstMsg?.role === 'system' ? messages.slice(1) : messages;
+    const expectedHistoryCount = nonSystemMsgs.length - 1;
     const historyBefore = LLM.getHistory();
-    console.log('mlx_history_before_clear', { count: historyBefore.length });
+    console.log('mlx_history_check', { nativeCount: historyBefore.length, expectedCount: expectedHistoryCount });
 
-    LLM.clearHistory();
-    console.log('mlx_history_after_clear', { count: LLM.getHistory().length });
+    if (historyBefore.length !== expectedHistoryCount) {
+      LLM.clearHistory();
+      console.log('mlx_history_cleared_mismatch');
+    }
 
     const lastMessage = messages[messages.length - 1];
     const prompt = typeof lastMessage.content === 'string' ? lastMessage.content : '';
