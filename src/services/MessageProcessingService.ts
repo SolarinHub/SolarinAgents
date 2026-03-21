@@ -872,6 +872,7 @@ export class MessageProcessingService {
 
   private async shouldSkipRagForInput(messages: Array<{ role: string; content: string }>): Promise<boolean> {
     let lastUserText = '';
+    let isFileMessage = false;
 
     for (let index = messages.length - 1; index >= 0; index -= 1) {
       const entry = messages[index];
@@ -883,8 +884,10 @@ export class MessageProcessingService {
         const parsed = JSON.parse(entry.content);
         if (parsed?.type === 'ocr_result') {
           lastUserText = String(parsed?.userPrompt || '').trim();
+          isFileMessage = true;
         } else if (parsed?.type === 'file_upload') {
           lastUserText = String(parsed?.userContent || '').trim();
+          isFileMessage = true;
         } else {
           lastUserText = String(entry.content || '').trim();
         }
@@ -897,11 +900,11 @@ export class MessageProcessingService {
     const compactText = lastUserText.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
     const tokenCount = compactText.length > 0 ? compactText.split(/\s+/).length : 0;
 
-    if (compactText.length <= 4 || tokenCount <= 1) {
+    if (!isFileMessage && (compactText.length <= 4 || tokenCount <= 1)) {
       return true;
     }
 
-    if (/^(hi|hey|hello|yo|sup|hola|hii+)$/.test(compactText)) {
+    if (!isFileMessage && /^(hi|hey|hello|yo|sup|hola|hii+)$/.test(compactText)) {
       return true;
     }
 
