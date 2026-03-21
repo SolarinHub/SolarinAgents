@@ -60,6 +60,16 @@ export function createStreamChatResponse(context: StreamContext) {
 
       const duration = Date.now() - started;
 
+      logger.logInference({
+        model: model.name,
+        endpoint: path,
+        messages,
+        stream: true,
+        response: typeof full === 'string' ? full : String(full),
+        duration,
+        status: 200,
+      });
+
       context.writeChunk(socket, {
         model: model.name,
         created_at: new Date().toISOString(),

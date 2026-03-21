@@ -60,6 +60,23 @@ function buildAppleOptions(settings?: ModelSettings) {
   };
 }
 
+function extractParams(settings?: ModelSettings): Record<string, any> | undefined {
+  if (!settings) return undefined;
+  const p: Record<string, any> = {};
+  if (settings.temperature != null) p.temperature = settings.temperature;
+  if (settings.maxTokens != null) p.max_tokens = settings.maxTokens;
+  if (settings.topP != null) p.top_p = settings.topP;
+  if (settings.topK != null) p.top_k = settings.topK;
+  if (settings.minP != null) p.min_p = settings.minP;
+  if (settings.penaltyRepeat != null) p.repeat_penalty = settings.penaltyRepeat;
+  if (settings.penaltyFreq != null) p.frequency_penalty = settings.penaltyFreq;
+  if (settings.penaltyPresent != null) p.presence_penalty = settings.penaltyPresent;
+  if (settings.seed != null) p.seed = settings.seed;
+  if (settings.mirostat != null) p.mirostat = settings.mirostat;
+  if (settings.stopWords?.length) p.stop = settings.stopWords;
+  return Object.keys(p).length > 0 ? p : undefined;
+}
+
 function buildRemoteOptions(stream: boolean, settings?: ModelSettings): OnlineModelRequestOptions {
   return {
     temperature: settings?.temperature,
@@ -372,6 +389,16 @@ export async function handleChatRequest(
   const stream = payload.stream === true;
   const settings = buildCustomSettings(payload.options);
 
+  const logModel = modelIdentifier || 'default';
+
+  logger.logInference({
+    model: logModel,
+    endpoint: path,
+    messages: parsed.messages,
+    params: extractParams(settings),
+    stream,
+  });
+
   if (modelIdentifier === 'apple-foundation') {
     await handleAppleModelRequest(socket, method, path, parsed.messages, stream, settings, sendJSONResponse);
     return;
@@ -400,8 +427,21 @@ export async function handleChatRequest(
     return;
   }
 
+  const started = Date.now();
+
   try {
     const responseText = await engineService.mgr().gen(parsed.messages as any, { settings });
+    const duration = Date.now() - started;
+    logger.logInference({
+      model: target.model.name,
+      endpoint: path,
+      messages: parsed.messages,
+      params: extractParams(settings),
+      stream: false,
+      response: typeof responseText === 'string' ? responseText : String(responseText),
+      duration,
+      status: 200,
+    });
     sendJSONResponse(socket, 200, {
       model: target.model.name,
       created_at: new Date().toISOString(),
@@ -445,6 +485,15 @@ export async function handleGenerateRequest(
   const modelIdentifier = typeof payload.model === 'string' ? payload.model : undefined;
   const stream = payload.stream === true;
   const settings = buildCustomSettings(payload.options);
+  const genLogModel = modelIdentifier || 'default';
+
+  logger.logInference({
+    model: genLogModel,
+    endpoint: path,
+    messages: parsed.messages,
+    params: extractParams(settings),
+    stream,
+  });
 
   if (modelIdentifier === 'apple-foundation') {
     await handleAppleModelRequest(socket, method, path, parsed.messages, stream, settings, sendJSONResponse);
@@ -474,8 +523,21 @@ export async function handleGenerateRequest(
     return;
   }
 
+  const genStarted = Date.now();
+
   try {
     const responseText = await engineService.mgr().gen(parsed.messages as any, { settings });
+    const genDuration = Date.now() - genStarted;
+    logger.logInference({
+      model: target.model.name,
+      endpoint: path,
+      messages: parsed.messages,
+      params: extractParams(settings),
+      stream: false,
+      response: typeof responseText === 'string' ? responseText : String(responseText),
+      duration: genDuration,
+      status: 200,
+    });
     sendJSONResponse(socket, 200, {
       model: target.model.name,
       created_at: new Date().toISOString(),

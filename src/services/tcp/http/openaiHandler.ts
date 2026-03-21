@@ -50,6 +50,20 @@ function mapRemoteMessages(messages: { role: string; content: string }[]): Remot
   });
 }
 
+function extractParams(settings?: ModelSettings): Record<string, any> | undefined {
+  if (!settings) return undefined;
+  const p: Record<string, any> = {};
+  if (settings.temperature != null) p.temperature = settings.temperature;
+  if (settings.maxTokens != null) p.max_tokens = settings.maxTokens;
+  if (settings.topP != null) p.top_p = settings.topP;
+  if (settings.topK != null) p.top_k = settings.topK;
+  if (settings.penaltyFreq != null) p.frequency_penalty = settings.penaltyFreq;
+  if (settings.penaltyPresent != null) p.presence_penalty = settings.penaltyPresent;
+  if (settings.seed != null) p.seed = settings.seed;
+  if (settings.stopWords?.length) p.stop = settings.stopWords;
+  return Object.keys(p).length > 0 ? p : undefined;
+}
+
 function buildSettings(payload: any): ModelSettings | undefined {
   const opts: any = {};
   if (payload.temperature != null) opts.temperature = payload.temperature;
@@ -209,6 +223,15 @@ export async function handleOpenAIChatCompletions(
   const stream = payload.stream === true;
   const settings = buildSettings(payload);
   const id = genId();
+  const oaiLogModel = modelId || 'default';
+
+  logger.logInference({
+    model: oaiLogModel,
+    endpoint: path,
+    messages: parsed.messages,
+    params: extractParams(settings),
+    stream,
+  });
 
   if (modelId === 'apple-foundation') {
     const available = appleFoundationService.isAvailable();
@@ -318,6 +341,15 @@ export async function handleOpenAIChatCompletions(
 
   try {
     const text = await engineService.mgr().gen(parsed.messages as any, { settings });
+    logger.logInference({
+      model: target.model.name,
+      endpoint: path,
+      messages: parsed.messages,
+      params: extractParams(settings),
+      stream: false,
+      response: typeof text === 'string' ? text : String(text),
+      status: 200,
+    });
     sendJSONResponse(socket, 200, buildCompletion(id, target.model.name, text as string));
     logger.logWebRequest(method, path, 200);
   } catch {
