@@ -107,9 +107,11 @@ export async function handleTagsRequest(
       is_external: model.isExternal === true
     }));
     sendJSONResponse(socket, 200, { models: items });
+    logger.info(`model_list count:${items.length}`, 'model');
     logger.logWebRequest(method, path, 200);
   } catch (error) {
     sendJSONResponse(socket, 500, { error: 'models_unavailable' });
+    logger.error('model_list_failed', 'model');
     logger.logWebRequest(method, path, 500);
   }
 }

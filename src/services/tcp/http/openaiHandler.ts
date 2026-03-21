@@ -412,9 +412,11 @@ export async function handleOpenAIModels(
     } catch {}
 
     sendJSONResponse(socket, 200, { object: 'list', data });
+    logger.info(`model_list count:${data.length}`, 'model');
     logger.logWebRequest(method, path, 200);
   } catch {
     sendJSONResponse(socket, 500, { error: { message: 'failed_to_list_models', type: 'server_error' } });
+    logger.error('model_list_failed', 'model');
     logger.logWebRequest(method, path, 500);
   }
 }
