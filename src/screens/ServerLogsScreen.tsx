@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Text, TouchableOpacity, RefreshControl, Switch, Clipboard } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, RefreshControl, Switch, Clipboard } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -192,8 +192,13 @@ export default function ServerLogsScreen() {
             <Text style={s.dim}>{prefix}</Text>
             <Text style={{ color: roleColor }}>{msg.role}</Text>
             <Text style={s.dim}>: </Text>
-            <Text style={s.text}>{truncate(maskSensitiveData(msg.content), 500)}</Text>
           </Text>
+          <TextInput
+            editable={false}
+            multiline
+            value={'      ' + truncate(maskSensitiveData(msg.content), 500)}
+            style={[s.mono, s.text, s.inputReset]}
+          />
         </View>
       );
     });
@@ -209,19 +214,21 @@ export default function ServerLogsScreen() {
     const dur = meta.duration != null ? ` ${meta.duration}ms` : '';
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => toggleExpand(log.id)}
-      >
-        <Text selectable style={s.mono}>
-          <Text style={s.ts}>[{log.timestamp}]</Text>
-          <Text style={{ color: statusColor }}>{` [${status}]`}</Text>
-          <Text style={s.dim}>{` ${arrow} `}</Text>
-          <Text style={s.text}>{meta.model || 'unknown'}</Text>
-          {meta.endpoint && <Text style={s.dim}>{` ${meta.endpoint}`}</Text>}
-          {meta.stream && <Text style={s.dim}> stream</Text>}
-          {dur ? <Text style={s.green}>{dur}</Text> : null}
-        </Text>
+      <View>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => toggleExpand(log.id)}
+        >
+          <Text selectable style={s.mono}>
+            <Text style={s.ts}>[{log.timestamp}]</Text>
+            <Text style={{ color: statusColor }}>{` [${status}]`}</Text>
+            <Text style={s.dim}>{` ${arrow} `}</Text>
+            <Text style={s.text}>{meta.model || 'unknown'}</Text>
+            {meta.endpoint && <Text style={s.dim}>{` ${meta.endpoint}`}</Text>}
+            {meta.stream && <Text style={s.dim}> stream</Text>}
+            {dur ? <Text style={s.green}>{dur}</Text> : null}
+          </Text>
+        </TouchableOpacity>
 
         {expanded && (
           <View style={s.details}>
@@ -267,12 +274,17 @@ export default function ServerLogsScreen() {
                   <Text style={s.dim}>{'  `-- '}</Text>
                   <Text style={s.label}>response </Text>
                 </Text>
-                <Text selectable style={[s.mono, s.resp]}>{'      ' + truncate(maskSensitiveData(meta.response), 1000)}</Text>
+                <TextInput
+                  editable={false}
+                  multiline
+                  value={'      ' + truncate(maskSensitiveData(meta.response), 1000)}
+                  style={[s.mono, s.resp, s.inputReset]}
+                />
               </View>
             )}
           </View>
         )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -486,6 +498,10 @@ const s = StyleSheet.create({
   },
   resp: {
     color: '#52D274',
+  },
+  inputReset: {
+    padding: 0,
+    backgroundColor: 'transparent',
   },
   details: {
     marginBottom: 2,
