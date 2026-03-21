@@ -234,8 +234,11 @@ class MlxManager implements InferenceManager {
     if (opts?.settings?.temperature !== undefined) {
       LLM.temperature = opts.settings.temperature;
     }
+    if (opts?.settings?.enableThinking !== undefined) {
+      LLM.enableThinking = opts.settings.enableThinking;
+    }
 
-    console.log('mlx_gen_params', { systemPrompt: LLM.systemPrompt, maxTokens: LLM.maxTokens, temperature: LLM.temperature });
+    console.log('mlx_gen_params', { systemPrompt: LLM.systemPrompt, maxTokens: LLM.maxTokens, temperature: LLM.temperature, enableThinking: LLM.enableThinking });
 
     const historyBefore = LLM.getHistory();
     console.log('mlx_history_before_clear', { count: historyBefore.length });
