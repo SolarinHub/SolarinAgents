@@ -877,26 +877,26 @@ class ChatManager {
   }
 
   private async generateTitleForCurrentChat(userMessage: string): Promise<void> {
-    if (!this.currentChatId) return;
+    const chatId = this.currentChatId;
+    if (!chatId) return;
 
-    const chat = this.getChatById(this.currentChatId);
+    const chat = this.getChatById(chatId);
     if (!chat) return;
 
-    try {
-      setTimeout(async () => {
-        try {
-          const title = await this.generateChatTitle(userMessage);
-          const chatToUpdate = this.getChatById(this.currentChatId!);
-          if (chatToUpdate && chatToUpdate.messages.filter(m => m.role === 'user').length === 1) {
-            chatToUpdate.title = title;
-            await this.saveChat(chatToUpdate);
-            this.notifyListeners();
-          }
-        } catch (error) {
+    setTimeout(async () => {
+      try {
+        const title = await this.generateChatTitle(userMessage);
+        const chatToUpdate = this.getChatById(chatId);
+        if (chatToUpdate && chatToUpdate.messages.filter(m => m.role === 'user').length === 1) {
+          chatToUpdate.title = title;
+          await this.saveChat(chatToUpdate);
+          this.notifyListeners();
+          console.log('title_saved', title);
         }
-      }, 1000);
-    } catch (error) {
-    }
+      } catch (error) {
+        console.log('title_gen_failed', error instanceof Error ? error.message : 'unknown');
+      }
+    }, 1000);
   }
 
   async generateChatTitle(userMessage: string): Promise<string> {
