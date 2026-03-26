@@ -93,6 +93,22 @@ export class GeminiService {
         
         return [{ text: `${instruction}\n\nUser request: ${userPrompt}` }];
       }
+
+      if (parsed.type === 'file_upload' && parsed.metadata?.remoteFileUri) {
+        const base64 = await FileSystem.readAsStringAsync(
+          parsed.metadata.remoteFileUri,
+          { encoding: FileSystem.EncodingType.Base64 }
+        );
+        return [
+          {
+            inlineData: {
+              mimeType: parsed.metadata.mimeType || 'application/octet-stream',
+              data: base64,
+            }
+          },
+          { text: parsed.userContent || `Analyze this file: ${parsed.fileName || 'document'}` },
+        ];
+      }
     } catch (error) {
     }
     

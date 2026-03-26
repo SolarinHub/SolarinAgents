@@ -109,6 +109,22 @@ export class OpenAIService {
         };
       }
 
+      if (parsed.type === 'file_upload' && parsed.metadata?.remoteFileUri) {
+        try {
+          const text = await FileSystem.readAsStringAsync(parsed.metadata.remoteFileUri);
+          const fileName = parsed.fileName || 'document';
+          return {
+            role: message.role,
+            content: `--- ${fileName} ---\n${text}\n---\n\n${parsed.userContent || `File uploaded: ${fileName}`}`,
+          };
+        } catch {
+          return {
+            role: message.role,
+            content: parsed.userContent || `File uploaded: ${parsed.fileName || 'document'}`,
+          };
+        }
+      }
+
       if (parsed.type === 'ocr_result') {
         const instruction = parsed.internalInstruction || '';
         const userPrompt = parsed.userPrompt || '';

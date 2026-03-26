@@ -100,6 +100,30 @@ export class ClaudeService {
           content: `${instruction}\n\nUser request: ${userPrompt}`
         };
       }
+
+      if (parsed.type === 'file_upload' && parsed.metadata?.remoteFileUri) {
+        const base64 = await FileSystem.readAsStringAsync(
+          parsed.metadata.remoteFileUri,
+          { encoding: FileSystem.EncodingType.Base64 }
+        );
+        return {
+          role: message.role === 'user' ? 'user' : 'assistant',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: parsed.metadata.mimeType || 'application/octet-stream',
+                data: base64,
+              },
+            },
+            {
+              type: 'text',
+              text: parsed.userContent || `Analyze this file: ${parsed.fileName || 'document'}`,
+            },
+          ],
+        };
+      }
     } catch (error) {
     }
     
