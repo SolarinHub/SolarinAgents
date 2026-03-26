@@ -4,7 +4,7 @@
   from the Model Settings section on the Settings screen.
 */
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Text } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Text, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -42,18 +42,17 @@ type DialogSettingConfig = {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ModelParameters'>;
 
-export default function ModelParametersScreen({ navigation }: Props) {
+export default function ModelParametersScreen({ navigation, route }: Props) {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
+  const modelName = route.params?.modelName;
+  const isPerModel = !!modelName;
 
   const [settings, setSettings] = useState<ModelSettings>(
     llamaManager.getSettings(),
   );
   const [error, setError] = useState<string | null>(null);
-  const modelPath = llamaManager.getModelPath();
-  const modelName = modelPath
-    ? modelPath.split('/').pop()?.replace('.gguf', '') ?? 'current model'
-    : 'current model';
+  const showMlxWarning = !isPerModel && Platform.OS === 'ios';
 
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -173,7 +172,11 @@ export default function ModelParametersScreen({ navigation }: Props) {
             color={currentTheme === 'dark' ? '#FFB300' : '#E65100'}
           />
           <Text style={[styles.noticeText, { color: currentTheme === 'dark' ? '#FFB300' : '#E65100' }]}>
-            Applying to: {modelName}
+            {isPerModel
+              ? `Currently applying to: ${modelName.replace('.gguf', '')}`
+              : Platform.OS === 'android'
+                ? 'These settings do not apply to remote/cloud models.'
+                : 'These settings do not apply to Apple Intelligence or remote/cloud models.'}
           </Text>
         </View>
 
@@ -184,6 +187,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
           onSettingsChange={handleChange}
           onMaxTokensPress={handleMaxTokens}
           onDialogOpen={handleOpenDialog}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsControls
@@ -195,6 +199,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
             setTempGrammar(settings.grammar);
             setShowGrammarDialog(true);
           }}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsPenalties
@@ -209,6 +214,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
           defaultSettings={DEFAULT_SETTINGS}
           onSettingsChange={handleChange}
           onDialogOpen={handleOpenDialog}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsDry
@@ -220,12 +226,14 @@ export default function ModelParametersScreen({ navigation }: Props) {
             setTempDrySeq((settings.drySequenceBreakers || []).join('\n'));
             setShowDrySeqDialog(true);
           }}
+          showMlxWarning={showMlxWarning}
         />
 
         <ModelSettingsAdvanced
           modelSettings={settings}
           defaultSettings={DEFAULT_SETTINGS}
           onSettingsChange={handleChange}
+          showMlxWarning={showMlxWarning}
           onNProbsDialogOpen={() => {
             setTempNProbs((settings.nProbs ?? 0).toString());
             setShowNProbsDialog(true);
@@ -248,6 +256,7 @@ export default function ModelParametersScreen({ navigation }: Props) {
         modelSettings={settings}
         defaultSettings={DEFAULT_SETTINGS}
         onSettingsChange={handleChange}
+        showMlxWarning={showMlxWarning}
         showGrammarDialog={showGrammarDialog}
         setShowGrammarDialog={setShowGrammarDialog}
         showSeedDialog={showSeedDialog}
