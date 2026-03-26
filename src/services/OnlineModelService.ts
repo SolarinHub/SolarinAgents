@@ -1,9 +1,11 @@
 import EventEmitter from 'eventemitter3';
 import { GeminiService } from './GeminiService';
-import { OpenAIService } from './OpenAIService';
+import { OpenAIService, type OpenAIResponse } from './OpenAIService';
 import { ClaudeService } from './ClaudeService';
 import Constants from 'expo-constants';
 import providerKeyStorage from '../utils/ProviderKeyStorage';
+import type { Tool, ToolCall } from './tools/ToolRegistry';
+import type { GeneratedImage, ImageGenOptions } from './adapters/OpenAIImageAdapter';
 
 export interface ChatMessage {
   id: string;
@@ -472,6 +474,45 @@ export class OnlineModelService {
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
+  }
+
+  async sendOpenAIWithTools(
+    messages: ChatMessage[],
+    tools: Tool[],
+    options: OnlineModelRequestOptions = {},
+    onToken?: (token: string) => boolean | void,
+    provider = 'chatgpt'
+  ): Promise<OpenAIResponse> {
+    const openAIService = this._openAIServiceGetter();
+    if (!openAIService) {
+      throw new Error('OpenAIService not initialized');
+    }
+
+    const configuredModel = await this.getModelName(provider);
+    const modelToUse = configuredModel || this.getDefaultModelName(provider);
+
+    return openAIService.generateResponse(
+      messages,
+      {
+        ...options,
+        model: options.model || modelToUse,
+        tools,
+      },
+      onToken,
+      provider
+    );
+  }
+
+  async generateImage(
+    prompt: string,
+    options: ImageGenOptions = {},
+    provider = 'chatgpt'
+  ): Promise<GeneratedImage> {
+    const openAIService = this._openAIServiceGetter();
+    if (!openAIService) {
+      throw new Error('OpenAIService not initialized');
+    }
+    return openAIService.generateImage(prompt, options, provider);
   }
 
   async generateChatTitle(userMessage: string, provider: string): Promise<string> {
