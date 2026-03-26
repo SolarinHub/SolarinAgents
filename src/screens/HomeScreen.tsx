@@ -658,11 +658,15 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
         showDialog('Error', 'Failed to regenerate response');
         return;
       }
-      setChat(fork);
-      setMessages([...fork.messages]);
 
-      await regenerationService.handleRegenerate(
-        fork.messages,
+      const baseMessages = fork.messages.slice(0, -1);
+      fork.messages = baseMessages;
+      await chatManager.updateChatMessages(fork.id, baseMessages);
+      setChat(fork);
+      setMessages([...baseMessages]);
+
+      await regenerationService.regenerateFromBase(
+        baseMessages,
         activeProvider,
         settings
       );
