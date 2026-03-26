@@ -32,7 +32,7 @@ import type { ProviderType } from '../../services/ModelManagementService';
 import chatManager from '../../utils/ChatManager';
 import { uuidv4 } from 'react-native-rag';
 import { OnlineModelService } from '../../services/OnlineModelService';
-import { openAIFileAdapter } from '../../services/adapters/OpenAIFileAdapter';
+import { openAIFileAdapter, getMimeType } from '../../services/adapters/OpenAIFileAdapter';
 import { openAIFileStore } from '../../services/adapters/OpenAIFileStore';
 
 type ChatInputProps = {
@@ -658,6 +658,62 @@ export default function ChatInput({
     [onSend, processRagDocument, selectedModelPath, selectedFile, showDialog]
   );
 
+  const handleRemoteUpload = useCallback(async (fileUri: string, fileName: string) => {
+    const displayName = fileName || 'document';
+    const baseProvider = selectedModelPath
+      ? OnlineModelService.getBaseProvider(selectedModelPath)
+      : null;
+
+    if (baseProvider === 'chatgpt') {
+      try {
+        const curChatId = chatManager.getCurrentChatId() || 'unknown';
+        const result = await openAIFileAdapter.upload(
+          fileUri, displayName, 'assistants', selectedModelPath!
+        );
+        await openAIFileStore.save({
+          fileId: result.id,
+          filename: displayName,
+          chatId: curChatId,
+          provider: selectedModelPath!,
+          purpose: 'assistants',
+          bytes: result.bytes,
+          uploadedAt: Date.now(),
+        });
+        onSend(JSON.stringify({
+          type: 'file_upload',
+          fileName: displayName,
+          internalInstruction: `File "${displayName}" uploaded to OpenAI (id: ${result.id})`,
+          userContent: `File uploaded: ${displayName}`,
+          metadata: { openaiFileId: result.id },
+        }));
+        console.log('remote_upload_openai', displayName, result.id);
+      } catch (error) {
+        console.log('remote_upload_error', error instanceof Error ? error.message : 'unknown');
+        showDialog('Upload Error', 'Failed to upload file to OpenAI.');
+      }
+      return;
+    }
+
+    try {
+      const uploadsDir = `${FileSystem.documentDirectory}uploads`;
+      await FileSystem.makeDirectoryAsync(uploadsDir, { intermediates: true });
+      const destPath = `${uploadsDir}/${uuidv4()}_${displayName}`;
+      await FileSystem.copyAsync({ from: fileUri, to: destPath });
+
+      const mimeType = getMimeType(displayName);
+      onSend(JSON.stringify({
+        type: 'file_upload',
+        fileName: displayName,
+        userContent: `File uploaded: ${displayName}`,
+        metadata: { remoteFileUri: destPath, mimeType },
+      }));
+      console.log('remote_upload_file', displayName, baseProvider);
+    } catch (error) {
+      console.log('remote_upload_error', error instanceof Error ? error.message : 'unknown');
+      showDialog('Upload Error', 'Failed to process file.');
+    }
+  }, [selectedModelPath, onSend, showDialog]);
+
   const markRagDisabled = useCallback((raw: string) => {
     try {
       const parsed = JSON.parse(raw);
@@ -802,6 +858,12 @@ export default function ChatInput({
             return;
           }
         }
+
+        if (isRemoteModel && !isImageFile(file.name)) {
+          setShowAttachmentMenu(false);
+          await handleRemoteUpload(file.uri, file.name || 'document');
+          return;
+        }
         
         setSelectedFile({
           uri: file.uri,
@@ -813,7 +875,7 @@ export default function ChatInput({
     } catch (error) {
       showDialog('Error', 'Could not pick the document. Please try again.');
     }
-  }, [selectedModelPath, isMultimodalEnabled]);
+  }, [selectedModelPath, isMultimodalEnabled, isRemoteModel, handleRemoteUpload]);
 
   const closeFileModal = useCallback(() => {
     setFileModalVisible(false);
