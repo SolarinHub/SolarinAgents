@@ -33,6 +33,8 @@ type ModelSettingsCoreProps = {
   onToggleGpu?: (enabled: boolean) => void | Promise<void>;
   onGpuLayersChange?: (layers: number) => void | Promise<void>;
   onDialogOpen: (config: any) => void;
+  noExtraBuffers?: boolean;
+  onToggleNoExtraBuffers?: (enabled: boolean) => void;
 };
 
 const ModelSettingsCore = ({
@@ -48,6 +50,8 @@ const ModelSettingsCore = ({
   onEngineToggle,
   gpuConfig,
   onToggleGpu,
+  noExtraBuffers,
+  onToggleNoExtraBuffers,
 }: ModelSettingsCoreProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
@@ -236,6 +240,30 @@ const ModelSettingsCore = ({
             />
           </View>
         </>
+      )}
+
+      {onToggleNoExtraBuffers && (
+        <View style={[styles.settingItem, styles.settingItemBottomBorder]}>
+          <View style={styles.settingLeft}>
+            <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
+              <MaterialCommunityIcons name="memory" size={22} color={iconColor} />
+            </View>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: themeColors.text }]}>
+                Disable Extra Buffers
+              </Text>
+              <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
+                Reduces memory usage by skipping weight repacking buffers. Prompt processing may be slower.
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={Boolean(noExtraBuffers)}
+            onValueChange={onToggleNoExtraBuffers}
+            trackColor={{ false: themeColors.borderColor, true: themeColors.primary + '80' }}
+            thumbColor={noExtraBuffers ? themeColors.primary : themeColors.background}
+          />
+        </View>
       )}
     </>
   );

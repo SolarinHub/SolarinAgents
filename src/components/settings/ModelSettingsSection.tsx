@@ -57,6 +57,8 @@ type ModelSettingsSectionProps = {
   gpuConfig?: GpuConfig;
   onToggleGpu?: (enabled: boolean) => void | Promise<void>;
   onGpuLayersChange?: (layers: number) => void | Promise<void>;
+  noExtraBuffers?: boolean;
+  onToggleNoExtraBuffers?: (enabled: boolean) => void;
   showAppleFoundationToggle?: boolean;
   appleFoundationEnabled?: boolean;
   onToggleAppleFoundation?: (enabled: boolean) => void;
@@ -79,6 +81,8 @@ const ModelSettingsSection = ({
   gpuConfig,
   onToggleGpu,
   onGpuLayersChange,
+  noExtraBuffers,
+  onToggleNoExtraBuffers,
   showAppleFoundationToggle,
   appleFoundationEnabled,
   onToggleAppleFoundation,
@@ -105,6 +109,8 @@ const ModelSettingsSection = ({
         onToggleGpu={onToggleGpu}
         onGpuLayersChange={onGpuLayersChange}
         onDialogOpen={onDialogOpen}
+        noExtraBuffers={noExtraBuffers}
+        onToggleNoExtraBuffers={onToggleNoExtraBuffers}
       />
 
       <TouchableOpacity
