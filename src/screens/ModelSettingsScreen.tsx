@@ -264,7 +264,7 @@ export default function ModelSettingsScreen() {
                 onDrySequenceBreakersPress={() => {}}
                 onDialogOpen={handleDialogOpen}
                 defaultExpanded={false}
-                onModelParametersPress={() => navigation.navigate('ModelParameters')}
+                onModelParametersPress={() => navigation.navigate('ModelParameters', { modelName })}
               />
             </View>
           </View>
