@@ -30,6 +30,7 @@ export interface ModelSettings {
   xtcThreshold: number;
   typicalP: number;
   enableThinking: boolean;
+  noExtraBuffers: boolean;
 }
 
 export interface ModelSettingsConfig {
