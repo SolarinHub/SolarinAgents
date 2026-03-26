@@ -104,6 +104,7 @@ export default function ChatInput({
   const [pendingFileForMultimodal, setPendingFileForMultimodal] = useState<{uri: string, name?: string} | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [useRagForUpload, setUseRagForUpload] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<{uri: string, name: string} | null>(null);
   
   const inputRef = useRef<TextInput>(null);
   const attachmentMenuAnim = useRef(new Animated.Value(0)).current;
@@ -409,7 +410,7 @@ export default function ChatInput({
   };
 
   const handleSend = useCallback(() => {
-    if (!hasText) return;
+    if (!hasText && !pendingAttachment) return;
 
     if (isEditing) {
       onSaveEdit?.(text);
@@ -436,6 +437,17 @@ export default function ChatInput({
       );
       return;
     }
+
+    if (pendingAttachment) {
+      const prompt = text.trim();
+      const attachment = pendingAttachment;
+      setText('');
+      setInputHeight(52);
+      setShowAttachmentMenu(false);
+      setPendingAttachment(null);
+      handleRemoteUpload(attachment.uri, attachment.name, prompt);
+      return;
+    }
     
     try {
       onSend(text);
@@ -445,7 +457,7 @@ export default function ChatInput({
     setText('');
     setInputHeight(52);
     setShowAttachmentMenu(false);
-  }, [text, onSend, selectedModelPath, isModelLoading, hasText, isEditing, onSaveEdit]);
+  }, [text, onSend, selectedModelPath, isModelLoading, hasText, isEditing, onSaveEdit, pendingAttachment, handleRemoteUpload]);
 
   const handleContentSizeChange = useCallback((event: any) => {
     const height = Math.min(120, Math.max(52, event.nativeEvent.contentSize.height + 8));
@@ -658,8 +670,10 @@ export default function ChatInput({
     [onSend, processRagDocument, selectedModelPath, selectedFile, showDialog]
   );
 
-  const handleRemoteUpload = useCallback(async (fileUri: string, fileName: string) => {
+  const handleRemoteUpload = useCallback(async (fileUri: string, fileName: string, userPrompt?: string) => {
     const displayName = fileName || 'document';
+    const promptText = userPrompt?.trim() || '';
+    const userContent = promptText || `File uploaded: ${displayName}`;
     const baseProvider = selectedModelPath
       ? OnlineModelService.getBaseProvider(selectedModelPath)
       : null;
@@ -683,7 +697,7 @@ export default function ChatInput({
           type: 'file_upload',
           fileName: displayName,
           internalInstruction: `File "${displayName}" uploaded to OpenAI (id: ${result.id})`,
-          userContent: `File uploaded: ${displayName}`,
+          userContent,
           metadata: { openaiFileId: result.id },
         }));
         console.log('remote_upload_openai', displayName, result.id);
@@ -704,7 +718,7 @@ export default function ChatInput({
       onSend(JSON.stringify({
         type: 'file_upload',
         fileName: displayName,
-        userContent: `File uploaded: ${displayName}`,
+        userContent,
         metadata: { remoteFileUri: destPath, mimeType },
       }));
       console.log('remote_upload_file', displayName, baseProvider);
@@ -860,8 +874,9 @@ export default function ChatInput({
         }
 
         if (isRemoteModel && !isImageFile(file.name)) {
+          setPendingAttachment({ uri: file.uri, name: file.name || 'document' });
           setShowAttachmentMenu(false);
-          await handleRemoteUpload(file.uri, file.name || 'document');
+          setTimeout(() => inputRef.current?.focus(), 100);
           return;
         }
         
@@ -916,18 +931,20 @@ export default function ChatInput({
     isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.4)'
   , [isDark]);
 
+  const canSend = hasText || !!pendingAttachment;
+
   const sendButtonStyle = useMemo(() => [
     styles.sendButton,
     {
-      backgroundColor: hasText 
+      backgroundColor: canSend 
         ? getThemeAwareColor('#4a0660', currentTheme)
         : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
     }
-  ], [hasText, currentTheme, isDark]);
+  ], [canSend, currentTheme, isDark]);
 
   const sendIconColor = useMemo(() => 
-    hasText ? '#ffffff' : isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'
-  , [hasText, isDark]);
+    canSend ? '#ffffff' : isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'
+  , [canSend, isDark]);
 
   const attachmentButtonStyle = useMemo(() => [
     styles.attachmentButton,
@@ -1015,6 +1032,37 @@ export default function ChatInput({
             </Animated.View>
           )}
 
+          {pendingAttachment && (
+            <View style={[
+              styles.attachmentChip,
+              { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)' }
+            ]}>
+              <MaterialCommunityIcons
+                name="file-document-outline"
+                size={16}
+                color={getThemeAwareColor('#4a0660', currentTheme)}
+              />
+              <Text
+                style={[styles.attachmentChipText, { color: isDark ? '#fff' : '#333' }]}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
+                {pendingAttachment.name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPendingAttachment(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MaterialCommunityIcons
+                  name="close-circle"
+                  size={16}
+                  color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.inputWrapper}>
             {!isEditing && (
               <TouchableOpacity 
@@ -1086,7 +1134,7 @@ export default function ChatInput({
               <TouchableOpacity 
                 style={sendButtonStyle} 
                 onPress={handleSend}
-                disabled={!hasText || disabled}
+                disabled={!canSend || disabled}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons 
@@ -1418,6 +1466,22 @@ const styles = StyleSheet.create({
   editingActions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  attachmentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  attachmentChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    maxWidth: 200,
   },
   editButton: {
     width: 40,
