@@ -30,6 +30,10 @@ class LlamaAdapter implements InferenceManager {
     await llamaManager.unloadModel();
   }
 
+  stop() {
+    llamaManager.stopCompletion();
+  }
+
   caps() {
     return caps;
   }
