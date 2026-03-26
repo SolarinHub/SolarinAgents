@@ -124,6 +124,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       claude: false
     });
     const [cloneModels, setCloneModels] = useState<OnlineModel[]>([]);
+    const [remoteNames, setRemoteNames] = useState<Record<string, string>>({});
     const [isOnlineModelsExpanded, setIsOnlineModelsExpanded] = useState(false);
     const [isLocalModelsExpanded, setIsLocalModelsExpanded] = useState(true);
 
@@ -270,9 +271,13 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         sectionsData.push({ title: 'Local Models', data: localModels });
       }
 
-      sectionsData.push({ title: 'Remote Models', data: [...ONLINE_MODELS, ...cloneModels] });
+      const namedOnline = ONLINE_MODELS.map(m => ({
+        ...m,
+        name: remoteNames[m.id] || m.name,
+      }));
+      sectionsData.push({ title: 'Remote Models', data: [...namedOnline, ...cloneModels] });
       return sectionsData;
-    }, [models, appleFoundationEnabled, appleFoundationAvailable, cloneModels]);
+    }, [models, appleFoundationEnabled, appleFoundationAvailable, cloneModels, remoteNames]);
 
     useEffect(() => {
       if (sections.length > 0 && sections[0]?.data?.length > 0) {
@@ -292,9 +297,20 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       }
     }));
 
+    const loadRemoteNames = async () => {
+      const names: Record<string, string> = {};
+      for (const m of ONLINE_MODELS) {
+        const saved = await onlineModelService.getModelName(m.id);
+        if (saved) names[m.id] = saved;
+        else names[m.id] = onlineModelService.getDefaultModelName(m.id);
+      }
+      setRemoteNames(names);
+    };
+
     useEffect(() => {
       checkOnlineModelApiKeys();
       loadCloneModels();
+      loadRemoteNames();
     }, []);
 
     const loadCloneModels = async () => {
@@ -710,6 +726,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     useEffect(() => {
       if (modalVisible) {
         refreshAppleFoundationState();
+        loadRemoteNames();
         setOverlayActive(true);
         slideAnim.setValue(getScreenH());
         backdropAnim.setValue(0);
@@ -780,6 +797,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       const unsubscribe = onlineModelService.addListener('api-key-updated', () => {
         checkOnlineModelApiKeys();
         loadCloneModels();
+        loadRemoteNames();
       });
       
       return () => {
@@ -845,7 +863,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                 <Text style={[styles.selectorText, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>
                   {isModelLoading 
                     ? 'Loading...' 
-                    : getModelNameFromPath(selectedModelPath, models, cloneModels)
+                    : getModelNameFromPath(selectedModelPath, models, cloneModels, remoteNames)
                   }
                 </Text>
                 {selectedModelPath && !isModelLoading && (
