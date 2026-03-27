@@ -339,9 +339,10 @@ export class MessageProcessingService {
       streamTokens: true
     };
 
+    const isGemini = OnlineModelService.getBaseProvider(activeProvider) === 'gemini';
     const isOpenAI = OnlineModelService.getBaseProvider(activeProvider) === 'chatgpt';
     const isClaude = OnlineModelService.getBaseProvider(activeProvider) === 'claude';
-    console.log('msgproc_provider', { activeProvider, isOpenAI, isClaude });
+    console.log('msgproc_provider', { activeProvider, isGemini, isOpenAI, isClaude });
 
     /*
       Image generation: detect explicit image generation requests for OpenAI.
@@ -385,7 +386,78 @@ export class MessageProcessingService {
         Tool call loop for OpenAI: if tools are registered, send with tools
         and handle the tool call response loop (max 5 iterations).
       */
-      if (isOpenAI && toolRegistry.hasTools()) {
+      if (isGemini && toolRegistry.hasTools()) {
+        console.log('msgproc_gemini_tools_start', { toolCount: toolRegistry.getAllTools().length });
+        let iteration = 0;
+        let loopMessages: any[] = [...messageParams];
+        const tools = toolRegistry.getAllTools();
+
+        while (!toolExecutor.hasReachedLimit(iteration)) {
+          if (this.cancelGenerationRef.current) break;
+          iteration++;
+          console.log('msgproc_gemini_iter', { iteration, msgCount: loopMessages.length });
+
+          const response = await onlineModelService.sendGeminiWithTools(
+            loopMessages,
+            tools,
+            apiParams,
+            undefined,
+            activeProvider
+          );
+
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            this.callbacks.setStreamingMessage('Using tools...');
+            console.log('msgproc_gemini_tool_calls', {
+              count: response.toolCalls.length,
+              rawParts: response.rawParts ? response.rawParts.length : 0,
+            });
+
+            loopMessages.push({
+              id: generateRandomId(),
+              role: 'assistant' as const,
+              content: JSON.stringify({ type: 'gemini_tool_use_response', rawParts: response.rawParts || [] }),
+            });
+
+            const results = await toolExecutor.executeAll(response.toolCalls);
+            console.log('msgproc_gemini_tool_results', { count: results.length });
+
+            const toolMap = new Map<string, ToolCall>();
+            for (const tc of response.toolCalls) {
+              toolMap.set(tc.id, tc);
+            }
+
+            for (const result of results) {
+              const toolCall = toolMap.get(result.toolCallId);
+              loopMessages.push({
+                id: generateRandomId(),
+                role: 'user' as const,
+                toolCallId: result.toolCallId,
+                content: JSON.stringify({
+                  type: 'function_response',
+                  id: result.toolCallId,
+                  name: toolCall?.function.name || 'tool_result',
+                  response: { result: result.content },
+                }),
+              });
+            }
+
+            const hasOnlyBuiltins = response.toolCalls.every(
+              (tc: ToolCall) => toolRegistry.isBuiltin(tc.function.name)
+            );
+            if (hasOnlyBuiltins) {
+              console.log('msgproc_gemini_builtin_only');
+              break;
+            }
+            continue;
+          }
+
+          fullResponse = response.fullResponse;
+          tokenCount = response.tokenCount;
+          console.log('msgproc_gemini_done', { tokenCount, textLen: fullResponse.length });
+          legacyStreamCallback(fullResponse);
+          break;
+        }
+      } else if (isOpenAI && toolRegistry.hasTools()) {
         console.log('msgproc_openai_tools_start', { toolCount: toolRegistry.getAllTools().length });
         let iteration = 0;
         let loopMessages = [...messageParams];

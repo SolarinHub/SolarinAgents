@@ -1,5 +1,5 @@
 import EventEmitter from 'eventemitter3';
-import { GeminiService } from './GeminiService';
+import { GeminiService, type GeminiResponse } from './GeminiService';
 import { OpenAIService, type OpenAIResponse } from './OpenAIService';
 import { ClaudeService, type ClaudeResponse } from './ClaudeService';
 import Constants from 'expo-constants';
@@ -501,6 +501,33 @@ export class OnlineModelService {
     const modelToUse = configuredModel || this.getDefaultModelName(provider);
 
     return openAIService.generateResponse(
+      messages,
+      {
+        ...options,
+        model: options.model || modelToUse,
+        tools,
+      },
+      onToken,
+      provider
+    );
+  }
+
+  async sendGeminiWithTools(
+    messages: ChatMessage[],
+    tools: Tool[],
+    options: OnlineModelRequestOptions = {},
+    onToken?: (token: string) => boolean | void,
+    provider = 'gemini'
+  ): Promise<GeminiResponse> {
+    const geminiService = this._geminiServiceGetter();
+    if (!geminiService) {
+      throw new Error('GeminiService not initialized');
+    }
+
+    const configuredModel = await this.getModelName(provider);
+    const modelToUse = configuredModel || this.getDefaultModelName(provider);
+
+    return geminiService.generateResponse(
       messages,
       {
         ...options,
