@@ -212,13 +212,24 @@ export class ClaudeService {
   }
 
   private toClaudeTools(tools: Tool[]): any[] {
-    return tools
-      .filter((t): t is ToolSchema => 'function' in t)
-      .map(t => ({
-        name: t.function.name,
-        description: t.function.description,
-        input_schema: t.function.parameters,
-      }));
+    const claudeTools: any[] = [];
+
+    for (const t of tools) {
+      if ('function' in t) {
+        claudeTools.push({
+          name: t.function.name,
+          description: t.function.description,
+          input_schema: t.function.parameters,
+        });
+      } else if (t.type === 'web_search_preview') {
+        claudeTools.push({
+          type: 'web_search_20250305',
+          name: 'web_search',
+        });
+      }
+    }
+
+    return claudeTools;
   }
 
   async generateResponse(
