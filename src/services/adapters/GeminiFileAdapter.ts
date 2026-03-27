@@ -16,14 +16,13 @@ export type GeminiFile = {
 
 const ALLOWED_EXTENSIONS = [
   'pdf', 'txt', 'md', 'csv', 'json', 'jsonl', 'html', 'xml',
-  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-  'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif',
+  'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif',
   'mp3', 'wav', 'm4a', 'aac', 'ogg',
   'mp4', 'mov', 'mpeg', 'mpg', 'webm',
 ];
 
 const IMAGE_EXTENSIONS = [
-  'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif',
+  'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif',
 ];
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024;
