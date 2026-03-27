@@ -420,17 +420,6 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       projectorName?: string,
     ) => {
       if (onModelSelect) {
-        if (mode === 'vision' && visionModelName && projectorName) {
-          showDialog(
-            'Multimodal Model Ready',
-            `Loading ${visionModelName} with vision capabilities using ${projectorName}`
-          );
-        } else if (mode === 'text' && visionModelName) {
-          showDialog(
-            'Text-Only Model Ready',
-            `Loading ${visionModelName} in text-only mode (without vision capabilities)`
-          );
-        }
         onModelSelect('local', modelPath, projectorPath);
         return;
       }
@@ -623,6 +612,26 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       setProjectorSelectorVisible(false);
       setSelectedVisionModel(null);
     };
+
+    const handleLoadProjector = async () => {
+      if (!selectedModelPath) return;
+      const model = models.find(m => m.path === selectedModelPath);
+      if (!model) return;
+      setSelectedVisionModel(model);
+      await loadProjectorModels();
+      setProjectorSelectorVisible(true);
+    };
+
+    const loadedLocalModel = selectedModelPath
+      ? models.find(m => m.path === selectedModelPath || m.path === selectedModelPath)
+      : undefined;
+
+    const isGgufLoaded = !!loadedLocalModel &&
+      !isModelLoading &&
+      !isMLXModel(loadedLocalModel) &&
+      engineService.getEngineForModel(loadedLocalModel.path, loadedLocalModel.modelFormat) === 'llama';
+
+    const showLoadProjector = isGgufLoaded && !selectedProjectorPath && !isMultimodalEnabled;
 
     const handleUnloadModel = () => {
       if (!selectedModelPath) {
@@ -914,6 +923,18 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
             </View>
           </View>
           <View style={styles.selectorActions}>
+            {showLoadProjector && (
+              <TouchableOpacity
+                onPress={handleLoadProjector}
+                style={styles.unloadButton}
+              >
+                <MaterialCommunityIcons
+                  name="eye-plus"
+                  size={16}
+                  color={currentTheme === 'dark' ? '#5FD584' : '#2a8c42'}
+                />
+              </TouchableOpacity>
+            )}
             {selectedProjectorPath && !isModelLoading && (
               <TouchableOpacity 
                 onPress={handleUnloadProjector}
