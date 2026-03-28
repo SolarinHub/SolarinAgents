@@ -115,9 +115,8 @@ export default function ChatInput({
   const themeColors = useMemo(() => theme[currentTheme as 'light' | 'dark'], [currentTheme]);
   const isDark = currentTheme === 'dark';
   const isRemoteModel = isRemoteProvider(selectedModelPath);
-  const isAppleFoundation = selectedModelPath === 'apple-foundation';
   const ragEnabledForCurrentModel = !!selectedModelPath && !isRemoteModel;
-  const ragToggleDisabled = isAppleFoundation;
+  const ragToggleDisabled = false;
 
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
