@@ -7,6 +7,9 @@ import { appleFoundationService } from './AppleFoundationService';
 import type { ProviderType } from './ModelManagementService';
 import { RAGService } from './rag/RAGService';
 import type { Message as RAGMessage } from 'react-native-rag';
+import { toolRegistry } from './tools/ToolRegistry';
+import { toolExecutor } from './tools/ToolExecutor';
+import type { ToolCall } from './tools/ToolRegistry';
 
 export interface MessageProcessingCallbacks {
   setMessages: (messages: ChatMessage[]) => void;
@@ -242,10 +245,16 @@ export class MessageProcessingService {
             content = `${instruction}\n\nUser request: ${userPrompt}`;
           }
         } else if (parsed && parsed.type === 'file_upload') {
-          if (parsed.metadata?.ragDocumentId) {
+          if (parsed.metadata?.openaiFileId) {
+            const fileName = parsed.fileName || 'a file';
+            const userContent = parsed.userContent || `File uploaded: ${fileName}`;
+            content = `[File: ${fileName} (id: ${parsed.metadata.openaiFileId})]\n\n${userContent}`;
+          } else if (parsed.metadata?.ragDocumentId) {
             const fileName = parsed.fileName || 'a file';
             const userContent = parsed.userContent || `File uploaded: ${fileName}`;
             content = `User uploaded ${fileName}. The content has been stored for retrieval.\n\nUser request: ${userContent}`;
+          } else if (parsed.metadata?.remoteFileUri) {
+            content = msg.content;
           } else {
             content = parsed.internalInstruction || msg.content;
           }
@@ -330,10 +339,250 @@ export class MessageProcessingService {
       streamTokens: true
     };
 
+    const isGemini = OnlineModelService.getBaseProvider(activeProvider) === 'gemini';
+    const isOpenAI = OnlineModelService.getBaseProvider(activeProvider) === 'chatgpt';
+    const isClaude = OnlineModelService.getBaseProvider(activeProvider) === 'claude';
+    console.log('msgproc_provider', { activeProvider, isGemini, isOpenAI, isClaude });
+
+    /*
+      Image generation: detect explicit image generation requests for OpenAI.
+      If the last user message starts with /image, route to image generation.
+    */
+    if (isOpenAI) {
+      const lastUserMsg = baseMessages.filter(m => m.role === 'user').pop();
+      if (lastUserMsg && typeof lastUserMsg.content === 'string' && lastUserMsg.content.startsWith('/image ')) {
+        const prompt = lastUserMsg.content.slice(7).trim();
+        if (prompt.length > 0) {
+          try {
+            this.callbacks.setStreamingMessage('Generating image...');
+            const imageResult = await onlineModelService.generateImage(prompt, {}, activeProvider);
+            const imageMsg = JSON.stringify({
+              type: 'image_generation',
+              prompt,
+              revisedPrompt: imageResult.revisedPrompt,
+              localUri: imageResult.localUri,
+              url: imageResult.url,
+            });
+            fullResponse = imageMsg;
+            await chatManager.updateMessageContent(
+              messageId,
+              imageMsg,
+              '',
+              { duration: (Date.now() - startTime) / 1000, tokens: 0 }
+            );
+            return;
+          } catch (error) {
+            const errMsg = error instanceof Error ? error.message : 'Image generation failed';
+            fullResponse = errMsg;
+            await chatManager.updateMessageContent(messageId, errMsg, '', { duration: 0, tokens: 0 });
+            return;
+          }
+        }
+      }
+    }
+
     try {
-      await onlineModelService.sendMessage(activeProvider, messageParams, apiParams, legacyStreamCallback);
+      /*
+        Tool call loop for OpenAI: if tools are registered, send with tools
+        and handle the tool call response loop (max 5 iterations).
+      */
+      if (isGemini && toolRegistry.hasTools()) {
+        console.log('msgproc_gemini_tools_start', { toolCount: toolRegistry.getAllTools().length });
+        let iteration = 0;
+        let loopMessages: any[] = [...messageParams];
+        const tools = toolRegistry.getAllTools();
+
+        while (!toolExecutor.hasReachedLimit(iteration)) {
+          if (this.cancelGenerationRef.current) break;
+          iteration++;
+          console.log('msgproc_gemini_iter', { iteration, msgCount: loopMessages.length });
+
+          const response = await onlineModelService.sendGeminiWithTools(
+            loopMessages,
+            tools,
+            apiParams,
+            undefined,
+            activeProvider
+          );
+
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            this.callbacks.setStreamingMessage('Using tools...');
+            console.log('msgproc_gemini_tool_calls', {
+              count: response.toolCalls.length,
+              rawParts: response.rawParts ? response.rawParts.length : 0,
+            });
+
+            loopMessages.push({
+              id: generateRandomId(),
+              role: 'assistant' as const,
+              content: JSON.stringify({ type: 'gemini_tool_use_response', rawParts: response.rawParts || [] }),
+            });
+
+            const results = await toolExecutor.executeAll(response.toolCalls);
+            console.log('msgproc_gemini_tool_results', { count: results.length });
+
+            const toolMap = new Map<string, ToolCall>();
+            for (const tc of response.toolCalls) {
+              toolMap.set(tc.id, tc);
+            }
+
+            for (const result of results) {
+              const toolCall = toolMap.get(result.toolCallId);
+              loopMessages.push({
+                id: generateRandomId(),
+                role: 'user' as const,
+                toolCallId: result.toolCallId,
+                content: JSON.stringify({
+                  type: 'function_response',
+                  id: result.toolCallId,
+                  name: toolCall?.function.name || 'tool_result',
+                  response: { result: result.content },
+                }),
+              });
+            }
+
+            const hasOnlyBuiltins = response.toolCalls.every(
+              (tc: ToolCall) => toolRegistry.isBuiltin(tc.function.name)
+            );
+            if (hasOnlyBuiltins) {
+              console.log('msgproc_gemini_builtin_only');
+              break;
+            }
+            continue;
+          }
+
+          fullResponse = response.fullResponse;
+          tokenCount = response.tokenCount;
+          console.log('msgproc_gemini_done', { tokenCount, textLen: fullResponse.length });
+          legacyStreamCallback(fullResponse);
+          break;
+        }
+      } else if (isOpenAI && toolRegistry.hasTools()) {
+        console.log('msgproc_openai_tools_start', { toolCount: toolRegistry.getAllTools().length });
+        let iteration = 0;
+        let loopMessages = [...messageParams];
+        const tools = toolRegistry.getAllTools();
+
+        while (!toolExecutor.hasReachedLimit(iteration)) {
+          if (this.cancelGenerationRef.current) break;
+          iteration++;
+          console.log('msgproc_openai_iter', { iteration, msgCount: loopMessages.length });
+
+          const response = await onlineModelService.sendOpenAIWithTools(
+            loopMessages,
+            tools,
+            apiParams,
+            undefined,
+            activeProvider
+          );
+
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            this.callbacks.setStreamingMessage('Using tools...');
+            console.log('msgproc_openai_tool_calls', { count: response.toolCalls.length });
+
+            loopMessages.push({
+              id: generateRandomId(),
+              role: 'assistant' as const,
+              content: response.fullResponse || '',
+            });
+
+            const results = await toolExecutor.executeAll(response.toolCalls);
+            console.log('msgproc_openai_tool_results', { count: results.length });
+            for (const result of results) {
+              loopMessages.push({
+                id: generateRandomId(),
+                role: 'user' as const,
+                content: `[Tool result for ${result.toolCallId}]: ${result.content}`,
+              });
+            }
+
+            const hasOnlyBuiltins = response.toolCalls.every(
+              tc => toolRegistry.isBuiltin(tc.function.name)
+            );
+            if (hasOnlyBuiltins) {
+              console.log('msgproc_openai_builtin_only');
+              break;
+            }
+            continue;
+          }
+
+          fullResponse = response.fullResponse;
+          tokenCount = response.tokenCount;
+          console.log('msgproc_openai_done', { tokenCount, textLen: fullResponse.length });
+          legacyStreamCallback(fullResponse);
+          break;
+        }
+      } else if (isClaude && toolRegistry.hasTools()) {
+        console.log('msgproc_claude_tools_start', { toolCount: toolRegistry.getAllTools().length });
+        let iteration = 0;
+        let loopMessages: any[] = [...messageParams];
+        const tools = toolRegistry.getAllTools();
+
+        while (!toolExecutor.hasReachedLimit(iteration)) {
+          if (this.cancelGenerationRef.current) break;
+          iteration++;
+          console.log('msgproc_claude_iter', { iteration, msgCount: loopMessages.length });
+
+          const response = await onlineModelService.sendClaudeWithTools(
+            loopMessages,
+            tools,
+            apiParams,
+            undefined,
+            activeProvider
+          );
+
+          if (response.toolCalls && response.toolCalls.length > 0) {
+            this.callbacks.setStreamingMessage('Using tools...');
+            console.log('msgproc_claude_tool_calls', {
+              count: response.toolCalls.length,
+              rawBlocks: response.rawContent ? response.rawContent.length : 0,
+            });
+
+            loopMessages.push({
+              id: generateRandomId(),
+              role: 'assistant' as const,
+              content: JSON.stringify({ type: 'tool_use_response', rawContent: response.rawContent }),
+            });
+            console.log('msgproc_claude_push_assistant', { msgCount: loopMessages.length });
+
+            const results = await toolExecutor.executeAll(response.toolCalls);
+            console.log('msgproc_claude_tool_results', { count: results.length });
+            for (const result of results) {
+              loopMessages.push({
+                id: generateRandomId(),
+                role: 'user' as const,
+                content: result.content,
+                toolCallId: result.toolCallId,
+              });
+            }
+            console.log('msgproc_claude_push_results', { msgCount: loopMessages.length });
+
+            const hasOnlyBuiltins = response.toolCalls.every(
+              tc => toolRegistry.isBuiltin(tc.function.name)
+            );
+            if (hasOnlyBuiltins) {
+              console.log('msgproc_claude_builtin_only');
+              break;
+            }
+            continue;
+          }
+
+          fullResponse = response.fullResponse;
+          tokenCount = response.tokenCount;
+          console.log('msgproc_claude_done', { tokenCount, textLen: fullResponse.length });
+          legacyStreamCallback(fullResponse);
+          break;
+        }
+      } else {
+        console.log('msgproc_send_plain', { provider: activeProvider, msgCount: messageParams.length });
+        await onlineModelService.sendMessage(activeProvider, messageParams, apiParams, legacyStreamCallback);
+      }
     } catch (error) {
-      this.callbacks.handleApiError(error, this.getProviderDisplayName(activeProvider));
+      console.log('online_model_error', error instanceof Error ? error.message : 'unknown');
+      console.log('online_model_error_stack', error instanceof Error ? error.stack : '');
+      if (this.callbacks.handleApiError) {
+        this.callbacks.handleApiError(error, this.getProviderDisplayName(activeProvider));
+      }
       
       await chatManager.updateMessageContent(
         messageId,

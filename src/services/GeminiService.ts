@@ -93,6 +93,22 @@ export class GeminiService {
         
         return [{ text: `${instruction}\n\nUser request: ${userPrompt}` }];
       }
+
+      if (parsed.type === 'file_upload' && parsed.metadata?.remoteFileUri) {
+        const base64 = await FileSystem.readAsStringAsync(
+          parsed.metadata.remoteFileUri,
+          { encoding: FileSystem.EncodingType.Base64 }
+        );
+        return [
+          {
+            inlineData: {
+              mimeType: parsed.metadata.mimeType || 'application/octet-stream',
+              data: base64,
+            }
+          },
+          { text: parsed.userContent || `Analyze this file: ${parsed.fileName || 'document'}` },
+        ];
+      }
     } catch (error) {
     }
     
@@ -148,7 +164,7 @@ export class GeminiService {
   const baseUrl = await this.baseUrlProvider(provider);
   const url = `${baseUrl}/${modelPath}:${shouldStreamTokens ? 'streamGenerateContent' : 'generateContent'}?key=${apiKey}`;
 
-      const requestBody = {
+      const requestBody: any = {
         contents: formattedMessages,
         generationConfig: {
           temperature,
@@ -156,6 +172,12 @@ export class GeminiService {
           topP,
         }
       };
+      
+      if (systemMessage) {
+        requestBody.systemInstruction = {
+          parts: [{ text: systemMessage.content }]
+        };
+      }
 
       const headers = {
         'Content-Type': 'application/json'

@@ -164,7 +164,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       saveMessagesImmediate, saveMessages, saveMessagesDebounced, handleApiError
     }), [cancelGenerationRef, setMessages, setStreamingMessageId, setStreamingMessage, 
          setStreamingThinking, setStreamingStats, setIsStreaming, setIsRegenerating, 
-         saveMessagesImmediate, saveMessages, saveMessagesDebounced, updateMessageContentDebounced]);
+         saveMessagesImmediate, saveMessages, saveMessagesDebounced, updateMessageContentDebounced, handleApiError]);
 
   const regenerationService = useMemo(() => 
     new RegenerationService(cancelGenerationRef, {
@@ -173,7 +173,7 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
       saveMessagesImmediate, saveMessages, saveMessagesDebounced, handleApiError
     }), [cancelGenerationRef, setMessages, setStreamingMessageId, setStreamingMessage,
          setStreamingThinking, setStreamingStats, setIsStreaming, setIsRegenerating,
-         saveMessagesImmediate, saveMessages, saveMessagesDebounced]);
+         saveMessagesImmediate, saveMessages, saveMessagesDebounced, handleApiError]);
 
   useFocusEffect(
     useCallback(() => {
@@ -651,9 +651,22 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     try {
       await stopGenerationIfRunning();
       const settings = await getEffectiveSettings();
-      
-      await regenerationService.handleRegenerate(
-        messages,
+
+      const lastAssistantIdx = messages.length - 1;
+      const fork = await chatManager.forkChat(lastAssistantIdx);
+      if (!fork) {
+        showDialog('Error', 'Failed to regenerate response');
+        return;
+      }
+
+      const baseMessages = fork.messages.slice(0, -1);
+      fork.messages = baseMessages;
+      await chatManager.updateChatMessages(fork.id, baseMessages);
+      setChat(fork);
+      setMessages([...baseMessages]);
+
+      await regenerationService.regenerateFromBase(
+        baseMessages,
         activeProvider,
         settings
       );
@@ -675,7 +688,14 @@ export default function HomeScreen({ route, navigation }: HomeScreenProps) {
     try {
       cancelGenerationRef.current = true;
       engineService.stop();
+      if (activeProvider === 'local') {
+        try { await llamaManager.stopCompletion(); } catch {}
+      } else if (activeProvider === 'apple-foundation') {
+        appleFoundationService.cancel();
+      }
+      setIsLoading(false);
       resetStreamingState();
+      cancelGenerationRef.current = true;
       await ChatLifecycleService.startNewChat({ setChat, setMessages });
     } catch (error) {
       showDialog(

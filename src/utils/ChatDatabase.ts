@@ -67,6 +67,7 @@ class ChatDatabase {
       { name: 'forkedFromChatId', type: 'TEXT' },
       { name: 'forkPointIndex', type: 'INTEGER' },
       { name: 'createdAt', type: 'INTEGER' },
+      { name: 'pinned', type: 'INTEGER' },
     ];
     for (const col of cols) {
       try {
@@ -89,7 +90,7 @@ class ChatDatabase {
     if (!this.db) throw new Error('Database not initialized');
     return this.enqueue(async () => {
       await this.db!.runAsync(
-        'INSERT OR REPLACE INTO chats (id, title, timestamp, modelPath, parentChatId, branchFromMsgId, branchPointIndex, forkedFromChatId, forkPointIndex, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO chats (id, title, timestamp, modelPath, parentChatId, branchFromMsgId, branchPointIndex, forkedFromChatId, forkPointIndex, createdAt, pinned) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           chat.id,
           chat.title,
@@ -101,6 +102,7 @@ class ChatDatabase {
           chat.forkedFromChatId || null,
           chat.forkPointIndex ?? null,
           chat.createdAt,
+          chat.pinned ? 1 : 0,
         ]
       );
     });
@@ -164,6 +166,7 @@ class ChatDatabase {
       forkedFromChatId: string | null;
       forkPointIndex: number | null;
       createdAt: number | null;
+      pinned: number | null;
     }>('SELECT * FROM chats ORDER BY timestamp DESC');
 
     const chats: Chat[] = [];
@@ -207,6 +210,7 @@ class ChatDatabase {
         branchPointIndex: chatData.branchPointIndex ?? undefined,
         forkedFromChatId: chatData.forkedFromChatId || undefined,
         forkPointIndex: chatData.forkPointIndex ?? undefined,
+        pinned: chatData.pinned === 1 ? true : undefined,
       });
     }
 

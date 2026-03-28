@@ -2,12 +2,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ModelSettings } from './ModelSettingsService';
 import { DEFAULT_SETTINGS } from '../config/llamaConfig';
 
+const NO_EXTRA_BUFTS_KEY = '@init_no_extra_bufts';
+
 export class LlamaSettingsManager {
   private settings: ModelSettings = { ...DEFAULT_SETTINGS };
+  private noExtraBuffers: boolean = false;
 
   async loadSettings(): Promise<void> {
     try {
-      const savedSettings = await AsyncStorage.getItem('@global_model_settings');
+      const [savedSettings, savedNoExtraBufts] = await Promise.all([
+        AsyncStorage.getItem('@global_model_settings'),
+        AsyncStorage.getItem(NO_EXTRA_BUFTS_KEY),
+      ]);
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         
@@ -19,8 +25,10 @@ export class LlamaSettingsManager {
         this.settings = { ...DEFAULT_SETTINGS };
         await this.saveSettings();
       }
+      this.noExtraBuffers = savedNoExtraBufts === 'true';
     } catch (error) {
       this.settings = { ...DEFAULT_SETTINGS };
+      this.noExtraBuffers = false;
     }
   }
 
@@ -139,5 +147,14 @@ export class LlamaSettingsManager {
 
   async setLogitBias(logitBias: Array<Array<number>>): Promise<void> {
     await this.updateSettings({ logitBias });
+  }
+
+  getNoExtraBuffers(): boolean {
+    return this.noExtraBuffers;
+  }
+
+  async setNoExtraBuffers(enabled: boolean): Promise<void> {
+    this.noExtraBuffers = enabled;
+    await AsyncStorage.setItem(NO_EXTRA_BUFTS_KEY, enabled ? 'true' : 'false');
   }
 }

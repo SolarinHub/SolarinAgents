@@ -126,7 +126,7 @@ export class ModelManagementService {
       modelName = 'Gemini';
       iconName = "cloud";
     } else if (activeProvider === 'chatgpt') {
-      modelName = 'gpt-4.1';
+      modelName = 'ChatGPT';
       iconName = "cloud";
     } else if (activeProvider === 'claude') {
       modelName = 'Claude';

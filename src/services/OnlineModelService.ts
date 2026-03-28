@@ -1,15 +1,18 @@
 import EventEmitter from 'eventemitter3';
-import { GeminiService } from './GeminiService';
-import { OpenAIService } from './OpenAIService';
-import { ClaudeService } from './ClaudeService';
+import { GeminiService, type GeminiResponse } from './GeminiService';
+import { OpenAIService, type OpenAIResponse } from './OpenAIService';
+import { ClaudeService, type ClaudeResponse } from './ClaudeService';
 import Constants from 'expo-constants';
 import providerKeyStorage from '../utils/ProviderKeyStorage';
+import type { Tool, ToolCall } from './tools/ToolRegistry';
+import type { GeneratedImage, ImageGenOptions } from './adapters/OpenAIImageAdapter';
 
 export interface ChatMessage {
   id: string;
   content: string;
   role: 'user' | 'assistant' | 'system';
   thinking?: string;
+  toolCallId?: string;
   stats?: {
     duration: number;
     tokens: number;
@@ -239,7 +242,7 @@ export class OnlineModelService {
     const defaults: Record<string, string> = {
       gemini: 'gemini-2.5-flash',
       chatgpt: 'gpt-4.1',
-      claude: 'claude-sonnet-4-5'
+      claude: 'claude-sonnet-4-6'
     };
     return defaults[base] || '';
   }
@@ -430,11 +433,18 @@ export class OnlineModelService {
   ): Promise<string> {
     const claudeService = this._claudeServiceGetter();
     if (!claudeService) {
+      console.log('online_claude_service_missing', { provider });
       throw new Error('ClaudeService not initialized');
     }
     
     const configuredModel = await this.getModelName(provider);
     const modelToUse = configuredModel || this.getDefaultModelName(provider);
+    console.log('online_claude_send', {
+      provider,
+      model: options.model || modelToUse,
+      msgCount: messages.length,
+      stream: options.stream === true,
+    });
     
     const claudeOptions = {
       ...options,
@@ -451,6 +461,7 @@ export class OnlineModelService {
       streamEnabled ? onToken : undefined,
       provider
     );
+    console.log('online_claude_done', { provider, textLen: fullResponse.length });
     
     return fullResponse;
   }
@@ -472,6 +483,112 @@ export class OnlineModelService {
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
+  }
+
+  async sendOpenAIWithTools(
+    messages: ChatMessage[],
+    tools: Tool[],
+    options: OnlineModelRequestOptions = {},
+    onToken?: (token: string) => boolean | void,
+    provider = 'chatgpt'
+  ): Promise<OpenAIResponse> {
+    const openAIService = this._openAIServiceGetter();
+    if (!openAIService) {
+      throw new Error('OpenAIService not initialized');
+    }
+
+    const configuredModel = await this.getModelName(provider);
+    const modelToUse = configuredModel || this.getDefaultModelName(provider);
+
+    return openAIService.generateResponse(
+      messages,
+      {
+        ...options,
+        model: options.model || modelToUse,
+        tools,
+      },
+      onToken,
+      provider
+    );
+  }
+
+  async sendGeminiWithTools(
+    messages: ChatMessage[],
+    tools: Tool[],
+    options: OnlineModelRequestOptions = {},
+    onToken?: (token: string) => boolean | void,
+    provider = 'gemini'
+  ): Promise<GeminiResponse> {
+    const geminiService = this._geminiServiceGetter();
+    if (!geminiService) {
+      throw new Error('GeminiService not initialized');
+    }
+
+    const configuredModel = await this.getModelName(provider);
+    const modelToUse = configuredModel || this.getDefaultModelName(provider);
+
+    return geminiService.generateResponse(
+      messages,
+      {
+        ...options,
+        model: options.model || modelToUse,
+        tools,
+      },
+      onToken,
+      provider
+    );
+  }
+
+  async sendClaudeWithTools(
+    messages: ChatMessage[],
+    tools: Tool[],
+    options: OnlineModelRequestOptions = {},
+    onToken?: (token: string) => boolean | void,
+    provider = 'claude'
+  ): Promise<ClaudeResponse> {
+    const claudeService = this._claudeServiceGetter();
+    if (!claudeService) {
+      console.log('online_claude_tools_service_missing', { provider });
+      throw new Error('ClaudeService not initialized');
+    }
+
+    const configuredModel = await this.getModelName(provider);
+    const modelToUse = configuredModel || this.getDefaultModelName(provider);
+    console.log('online_claude_tools_send', {
+      provider,
+      model: options.model || modelToUse,
+      msgCount: messages.length,
+      toolCount: tools.length,
+    });
+
+    const result = await claudeService.generateResponse(
+      messages,
+      {
+        ...options,
+        model: options.model || modelToUse,
+        tools,
+      },
+      onToken,
+      provider
+    );
+    console.log('online_claude_tools_done', {
+      provider,
+      textLen: result.fullResponse.length,
+      toolCalls: result.toolCalls ? result.toolCalls.length : 0,
+    });
+    return result;
+  }
+
+  async generateImage(
+    prompt: string,
+    options: ImageGenOptions = {},
+    provider = 'chatgpt'
+  ): Promise<GeneratedImage> {
+    const openAIService = this._openAIServiceGetter();
+    if (!openAIService) {
+      throw new Error('OpenAIService not initialized');
+    }
+    return openAIService.generateImage(prompt, options, provider);
   }
 
   async generateChatTitle(userMessage: string, provider: string): Promise<string> {

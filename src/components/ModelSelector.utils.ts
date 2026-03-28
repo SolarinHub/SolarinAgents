@@ -15,7 +15,7 @@ export const getDisplayName = (filename: string) => {
   return filename.replace(/\.(gguf|bin)$/i, '');
 };
 
-export const getModelNameFromPath = (path: string | null, models: StoredModel[], cloneModels: OnlineModel[] = []): string => {
+export const getModelNameFromPath = (path: string | null, models: StoredModel[], cloneModels: OnlineModel[] = [], remoteNames: Record<string, string> = {}): string => {
   if (!path) return 'Select a Model';
 
   const cloneModel = cloneModels.find(model => model.id === path);
@@ -23,9 +23,9 @@ export const getModelNameFromPath = (path: string | null, models: StoredModel[],
     return cloneModel.name;
   }
   
-  if (path === 'gemini') return 'Gemini';
-  if (path === 'chatgpt') return 'ChatGPT';
-  if (path === 'claude') return 'Claude';
+  if (path === 'gemini') return remoteNames['gemini'] || 'Gemini';
+  if (path === 'chatgpt') return remoteNames['chatgpt'] || 'ChatGPT';
+  if (path === 'claude') return remoteNames['claude'] || 'Claude';
   if (path === 'apple-foundation') return 'Apple Foundation';
 
   if (OnlineModelService.isClone(path)) {

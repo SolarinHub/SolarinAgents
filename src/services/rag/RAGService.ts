@@ -17,6 +17,7 @@ import { ClaudeEmbeddings } from './ClaudeEmbeddings';
 import { LlamaRnLLM } from './LlamaRnLLM';
 import { OnlineModelLLM } from './OnlineModelLLM';
 import { AppleFoundationLLM } from './AppleFoundationLLM';
+import { UniversalEmbeddings } from './UniversalEmbeddings';
 import type { ModelSettings } from '../ModelSettingsService';
 import { llamaManager } from '../../utils/LlamaManager';
 import { engineService } from '../inference-engine-service';
@@ -118,7 +119,9 @@ class RAGServiceClass {
       resolvedProvider === 'claude';
     const isAppleFoundation = resolvedProvider === 'apple-foundation';
 
-    if (!isRemote && !isAppleFoundation) {
+    const isMlx = !isRemote && !isAppleFoundation && engineService.get() === 'mlx';
+
+    if (!isRemote && !isAppleFoundation && !isMlx) {
       await this.ensureEmbeddingSupport();
       console.log('rag_embeddings_verified');
     }
@@ -130,6 +133,8 @@ class RAGServiceClass {
       this.embeddings = new AppleRagEmbeddings();
     } else if (isRemote) {
       this.embeddings = this.createRemoteEmbeddings(resolvedProvider);
+    } else if (isMlx) {
+      this.embeddings = new UniversalEmbeddings();
     } else {
       this.embeddings = new LlamaRnEmbeddings();
     }

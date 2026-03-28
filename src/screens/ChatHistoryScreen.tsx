@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -123,6 +123,10 @@ export default function ChatHistoryScreen() {
     );
   };
 
+  const handleTogglePin = async (chatId: string) => {
+    await chatManager.togglePin(chatId);
+  };
+
   const handleDeleteAllChats = () => {
     showDialog(
       'Delete All Chats',
@@ -178,6 +182,16 @@ export default function ChatHistoryScreen() {
       <View style={styles.chatActions}>
         <TouchableOpacity
           style={styles.deleteButton}
+          onPress={() => handleTogglePin(item.id)}
+        >
+          <MaterialCommunityIcons 
+            name={item.pinned ? "pin" : "pin-outline"} 
+            size={20} 
+            color={item.pinned ? themeColors.primary : themeColors.secondaryText} 
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
           onPress={() => handleDeleteChat(item.id)}
         >
           <MaterialCommunityIcons name="delete-outline" size={20} color={themeColors.secondaryText} />
@@ -187,6 +201,15 @@ export default function ChatHistoryScreen() {
     </TouchableOpacity>
     );
   };
+
+  const sections = React.useMemo(() => {
+    const pinned = chats.filter(c => c.pinned);
+    const others = chats.filter(c => !c.pinned);
+    const result: { title: string; data: Chat[] }[] = [];
+    if (pinned.length > 0) result.push({ title: 'Pinned', data: pinned });
+    if (others.length > 0) result.push({ title: 'Chats', data: others });
+    return result;
+  }, [chats]);
 
   const headerRightButtons = (
     <>
@@ -225,9 +248,14 @@ export default function ChatHistoryScreen() {
             <ActivityIndicator size="large" color={themeColors.headerBackground} />
           </View>
         ) : (
-          <FlatList
-            data={chats}
+          <SectionList
+            sections={sections}
             renderItem={renderItem}
+            renderSectionHeader={({ section }) => (
+              <Text style={[styles.sectionHeader, { color: themeColors.secondaryText }]}>
+                {section.title}
+              </Text>
+            )}
             keyExtractor={item => item.id}
             contentContainerStyle={styles.listContent}
             onEndReached={loadMore}
@@ -253,6 +281,7 @@ export default function ChatHistoryScreen() {
                 </TouchableOpacity>
               </View>
             )}
+            stickySectionHeadersEnabled={false}
           />
         )}
       </View>
@@ -286,6 +315,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 12,
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 4,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   chatItem: {
     flexDirection: 'row',

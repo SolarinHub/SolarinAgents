@@ -124,6 +124,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       claude: false
     });
     const [cloneModels, setCloneModels] = useState<OnlineModel[]>([]);
+    const [remoteNames, setRemoteNames] = useState<Record<string, string>>({});
     const [isOnlineModelsExpanded, setIsOnlineModelsExpanded] = useState(false);
     const [isLocalModelsExpanded, setIsLocalModelsExpanded] = useState(true);
 
@@ -270,9 +271,13 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
         sectionsData.push({ title: 'Local Models', data: localModels });
       }
 
-      sectionsData.push({ title: 'Remote Models', data: [...ONLINE_MODELS, ...cloneModels] });
+      const namedOnline = ONLINE_MODELS.map(m => ({
+        ...m,
+        name: remoteNames[m.id] || m.name,
+      }));
+      sectionsData.push({ title: 'Remote Models', data: [...namedOnline, ...cloneModels] });
       return sectionsData;
-    }, [models, appleFoundationEnabled, appleFoundationAvailable, cloneModels]);
+    }, [models, appleFoundationEnabled, appleFoundationAvailable, cloneModels, remoteNames]);
 
     useEffect(() => {
       if (sections.length > 0 && sections[0]?.data?.length > 0) {
@@ -292,19 +297,34 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       }
     }));
 
+    const loadRemoteNames = async () => {
+      const names: Record<string, string> = {};
+      for (const m of ONLINE_MODELS) {
+        const saved = await onlineModelService.getModelName(m.id);
+        if (saved) names[m.id] = saved;
+        else names[m.id] = onlineModelService.getDefaultModelName(m.id);
+      }
+      setRemoteNames(names);
+    };
+
     useEffect(() => {
       checkOnlineModelApiKeys();
       loadCloneModels();
+      loadRemoteNames();
     }, []);
 
     const loadCloneModels = async () => {
       try {
         const clones = (await onlineModelService.listClones()).filter(c => ['gemini', 'chatgpt', 'claude'].includes(c.baseProvider));
-        const models = clones.map(c => ({
-          id: c.id,
-          name: c.displayName,
-          provider: c.baseProvider,
-          isOnline: true as const,
+        const models = await Promise.all(clones.map(async c => {
+          const savedModel = await onlineModelService.getModelName(c.id);
+          const modelName = savedModel || onlineModelService.getDefaultModelName(c.baseProvider);
+          return {
+            id: c.id,
+            name: modelName,
+            provider: c.baseProvider,
+            isOnline: true as const,
+          };
         }));
         setCloneModels(models);
         return clones;
@@ -400,17 +420,6 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       projectorName?: string,
     ) => {
       if (onModelSelect) {
-        if (mode === 'vision' && visionModelName && projectorName) {
-          showDialog(
-            'Multimodal Model Ready',
-            `Loading ${visionModelName} with vision capabilities using ${projectorName}`
-          );
-        } else if (mode === 'text' && visionModelName) {
-          showDialog(
-            'Text-Only Model Ready',
-            `Loading ${visionModelName} in text-only mode (without vision capabilities)`
-          );
-        }
         onModelSelect('local', modelPath, projectorPath);
         return;
       }
@@ -604,6 +613,26 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       setSelectedVisionModel(null);
     };
 
+    const handleLoadProjector = async () => {
+      if (!selectedModelPath) return;
+      const model = models.find(m => m.path === selectedModelPath);
+      if (!model) return;
+      setSelectedVisionModel(model);
+      await loadProjectorModels();
+      setProjectorSelectorVisible(true);
+    };
+
+    const loadedLocalModel = selectedModelPath
+      ? models.find(m => m.path === selectedModelPath || m.path === selectedModelPath)
+      : undefined;
+
+    const isGgufLoaded = !!loadedLocalModel &&
+      !isModelLoading &&
+      !isMLXModel(loadedLocalModel) &&
+      engineService.getEngineForModel(loadedLocalModel.path, loadedLocalModel.modelFormat) === 'llama';
+
+    const showLoadProjector = isGgufLoaded && !selectedProjectorPath && !isMultimodalEnabled;
+
     const handleUnloadModel = () => {
       if (!selectedModelPath) {
         showDialog(
@@ -710,6 +739,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
     useEffect(() => {
       if (modalVisible) {
         refreshAppleFoundationState();
+        loadRemoteNames();
         setOverlayActive(true);
         slideAnim.setValue(getScreenH());
         backdropAnim.setValue(0);
@@ -780,6 +810,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
       const unsubscribe = onlineModelService.addListener('api-key-updated', () => {
         checkOnlineModelApiKeys();
         loadCloneModels();
+        loadRemoteNames();
       });
       
       return () => {
@@ -845,7 +876,7 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
                 <Text style={[styles.selectorText, { color: currentTheme === 'dark' ? '#fff' : themeColors.text }]}>
                   {isModelLoading 
                     ? 'Loading...' 
-                    : getModelNameFromPath(selectedModelPath, models, cloneModels)
+                    : getModelNameFromPath(selectedModelPath, models, cloneModels, remoteNames)
                   }
                 </Text>
                 {selectedModelPath && !isModelLoading && (
@@ -892,6 +923,18 @@ const ModelSelector = forwardRef<{ refreshModels: () => void }, ModelSelectorPro
             </View>
           </View>
           <View style={styles.selectorActions}>
+            {showLoadProjector && (
+              <TouchableOpacity
+                onPress={handleLoadProjector}
+                style={styles.unloadButton}
+              >
+                <MaterialCommunityIcons
+                  name="eye-plus"
+                  size={16}
+                  color={currentTheme === 'dark' ? '#5FD584' : '#2a8c42'}
+                />
+              </TouchableOpacity>
+            )}
             {selectedProjectorPath && !isModelLoading && (
               <TouchableOpacity 
                 onPress={handleUnloadProjector}

@@ -246,6 +246,7 @@ export default function ChatView({
     
     let fileAttachment: { name: string; type?: string } | null = null;
     let multimodalContent: { type: string; uri?: string; text?: string }[] = [];
+    let generatedImage: { localUri?: string; url?: string; prompt?: string; revisedPrompt?: string } | null = null;
     
     const processContent = (content: string): string => {
       try {
@@ -268,10 +269,28 @@ export default function ChatView({
           }
           return parsedMessage.userPrompt || '';
         }
+
+        if (parsedMessage && parsedMessage.type === 'image_generation') {
+          generatedImage = {
+            localUri: parsedMessage.localUri,
+            url: parsedMessage.url,
+            prompt: parsedMessage.prompt,
+            revisedPrompt: parsedMessage.revisedPrompt,
+          };
+          return parsedMessage.revisedPrompt || parsedMessage.prompt || '';
+        }
         
         if (parsedMessage && 
             parsedMessage.type === 'file_upload' && 
             parsedMessage.internalInstruction) {
+
+          if (parsedMessage.metadata?.openaiFileId) {
+            fileAttachment = {
+              name: parsedMessage.fileName || 'uploaded file',
+              type: parsedMessage.fileName?.split('.').pop()?.toLowerCase() || 'file',
+            };
+            return parsedMessage.userContent || '';
+          }
           
           const match = parsedMessage.internalInstruction.match(/You're reading a file named: (.+?)\n/);
           if (match && match[1]) {
@@ -282,6 +301,16 @@ export default function ChatView({
           }
           
           return parsedMessage.userContent || "";
+        }
+
+        if (parsedMessage &&
+            parsedMessage.type === 'file_upload' &&
+            parsedMessage.metadata?.remoteFileUri) {
+          fileAttachment = {
+            name: parsedMessage.fileName || 'uploaded file',
+            type: parsedMessage.fileName?.split('.').pop()?.toLowerCase() || 'file',
+          };
+          return parsedMessage.userContent || '';
         }
       } catch (e) {
       }
@@ -414,6 +443,28 @@ export default function ChatView({
         </View>
       );
     };
+
+    const renderGeneratedImage = () => {
+      if (!generatedImage) return null;
+      const imageUri = generatedImage.localUri || generatedImage.url;
+      if (!imageUri) return null;
+
+      return (
+        <View style={styles.multimodalWrapper}>
+          <TouchableOpacity
+            style={styles.imageContainer}
+            onPress={() => openImageViewer(imageUri)}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.messageImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        </View>
+      );
+    };
     
     return (
       <View style={styles.messageContainer}>
@@ -461,6 +512,7 @@ export default function ChatView({
         
         {item.role === 'user' && fileAttachment ? renderFileAttachment() : null}
         {item.role === 'user' && multimodalContent.length > 0 ? renderMultimodalContent() : null}
+        {item.role === 'assistant' && generatedImage ? renderGeneratedImage() : null}
 
         <View style={[
           styles.messageCard,
@@ -683,9 +735,11 @@ export default function ChatView({
                     </Text>
                   </View>
                 ) : null}
-                
-                {item === messages[messages.length - 1] ? (
-                  <TouchableOpacity 
+                {item === messages[messages.length - 1] && !isCurrentlyStreaming ? (
+                  <View style={{ flex: 1 }} />
+                ) : null}
+                {item === messages[messages.length - 1] && !isCurrentlyStreaming ? (
+                  <TouchableOpacity
                     style={[
                       styles.regenerateButton,
                       isRegenerating && styles.regenerateButtonDisabled
@@ -696,20 +750,16 @@ export default function ChatView({
                       }
                     }}
                     disabled={isRegenerating}
+                    hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                   >
                     {isRegenerating ? (
                       <ActivityIndicator size="small" color={themeColors.secondaryText} />
                     ) : (
-                      <>
-                        <MaterialCommunityIcons 
-                          name="refresh" 
-                          size={14} 
-                          color={themeColors.secondaryText}
-                        />
-                        <Text style={[styles.regenerateButtonText, { color: themeColors.secondaryText }]}>
-                          Regenerate
-                        </Text>
-                      </>
+                      <MaterialCommunityIcons
+                        name="refresh"
+                        size={17}
+                        color={themeColors.secondaryText}
+                      />
                     )}
                   </TouchableOpacity>
                 ) : null}
@@ -718,6 +768,34 @@ export default function ChatView({
             </View>
             );
           })() : null}
+
+          {item.role === 'assistant' && !stats && item === messages[messages.length - 1] && !isCurrentlyStreaming ? (
+            <View style={styles.regenerateRow}>
+              <TouchableOpacity
+                style={[
+                  styles.regenerateButton,
+                  isRegenerating && styles.regenerateButtonDisabled
+                ]}
+                onPress={() => {
+                  if (!isRegenerating) {
+                    onRegenerateResponse();
+                  }
+                }}
+                disabled={isRegenerating}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              >
+                {isRegenerating ? (
+                  <ActivityIndicator size="small" color={themeColors.secondaryText} />
+                ) : (
+                  <MaterialCommunityIcons
+                    name="refresh"
+                    size={20}
+                    color={themeColors.secondaryText}
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
 
         {item.role === 'user' && branchInfo && branchInfo.total > 1 ? (
@@ -1022,20 +1100,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     opacity: 0.7,
   },
-  regenerateButton: {
+  regenerateRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    paddingTop: 4,
+  },
+  regenerateButton: {
     padding: 4,
     borderRadius: 4,
     opacity: 0.8,
   },
   regenerateButtonDisabled: {
     opacity: 0.5,
-  },
-  regenerateButtonText: {
-    fontSize: 12,
-    marginLeft: 4,
   },
   emptyState: {
     flex: 1,

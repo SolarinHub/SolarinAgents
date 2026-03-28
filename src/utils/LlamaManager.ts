@@ -50,10 +50,27 @@ class LlamaManager {
   private events = new EventEmitter<LlamaManagerEvents>();
   private isCancelled: boolean = false;
   private isUnloading: boolean = false;
+  private genLock: Promise<void> = Promise.resolve();
   
   private multimodalService = new MultimodalService();
   private tokenProcessingService = new TokenProcessingService();
   private settingsManager = new LlamaSettingsManager();
+
+  private genLockRelease: (() => void) | null = null;
+
+  private async acquireGenLock(): Promise<void> {
+    await this.genLock;
+    let release: () => void;
+    this.genLock = new Promise<void>(resolve => { release = resolve; });
+    this.genLockRelease = release!;
+  }
+
+  private releaseGenLock(): void {
+    if (this.genLockRelease) {
+      this.genLockRelease();
+      this.genLockRelease = null;
+    }
+  }
 
   private resolveUseMmapValue(value: unknown): boolean {
     if (value === 'false' || value === false) {
@@ -73,11 +90,17 @@ class LlamaManager {
       model: params.model,
       n_ctx: params.n_ctx,
       n_batch: params.n_batch,
+      n_ubatch: params.n_ubatch,
       n_parallel: params.n_parallel,
       n_threads: params.n_threads,
       n_gpu_layers: params.n_gpu_layers,
       use_mlock: typeof params.use_mlock === 'boolean' ? params.use_mlock : false,
       use_mmap: this.resolveUseMmapValue(params.use_mmap),
+      cache_type_k: params.cache_type_k,
+      cache_type_v: params.cache_type_v,
+      flash_attn_type: params.flash_attn_type,
+      kv_unified: params.kv_unified,
+      no_extra_bufts: params.no_extra_bufts,
       embedding: params.embedding,
       ctx_shift: params.ctx_shift,
     };
@@ -384,6 +407,7 @@ class LlamaManager {
         ...(typeof initOverrides?.n_parallel === 'number' ? { n_parallel: Math.max(1, Math.round(initOverrides.n_parallel)) } : {}),
         ...(typeof initOverrides?.n_threads === 'number' ? { n_threads: Math.max(1, Math.round(initOverrides.n_threads)) } : {}),
         n_gpu_layers: effectiveGpuLayers,
+        no_extra_bufts: this.settingsManager.getNoExtraBuffers(),
       };
       console.log('init_model_params', JSON.stringify(initParams, null, 2));
 
@@ -502,6 +526,14 @@ class LlamaManager {
     return this.settingsManager.setGrammar(grammar);
   }
 
+  getNoExtraBuffers(): boolean {
+    return this.settingsManager.getNoExtraBuffers();
+  }
+
+  async setNoExtraBuffers(enabled: boolean) {
+    return this.settingsManager.setNoExtraBuffers(enabled);
+  }
+
   getJinja(): boolean {
     return this.settingsManager.getJinja();
   }
@@ -560,6 +592,8 @@ class LlamaManager {
     if (!this.context) {
       throw new Error('Model not initialized');
     }
+
+    await this.acquireGenLock();
 
     let fullResponse = '';
     this.isCancelled = false;
@@ -735,6 +769,7 @@ class LlamaManager {
     } finally {
       this.tokenProcessingService.clearTokenQueue();
       this.isCancelled = false;
+      this.releaseGenLock();
     }
   }
 
@@ -742,6 +777,8 @@ class LlamaManager {
     if (!this.context) {
       throw new Error('Model not initialized');
     }
+
+    await this.acquireGenLock();
 
     const titlePrompt = [
       {
@@ -770,27 +807,13 @@ class LlamaManager {
           top_p: TITLE_GENERATION_CONFIG.topP,
           min_p: TITLE_GENERATION_CONFIG.minP,
           jinja: settings.jinja,
-          grammar: settings.grammar || undefined,
           n_probs: 0,
-          penalty_last_n: settings.penaltyLastN,
-          penalty_repeat: settings.penaltyRepeat,
-          penalty_freq: settings.penaltyFreq,
-          penalty_present: settings.penaltyPresent,
-          mirostat: settings.mirostat,
-          mirostat_tau: settings.mirostatTau,
-          mirostat_eta: settings.mirostatEta,
-          dry_multiplier: settings.dryMultiplier,
-          dry_base: settings.dryBase,
-          dry_allowed_length: settings.dryAllowedLength,
-          dry_penalty_last_n: settings.dryPenaltyLastN,
-          dry_sequence_breakers: settings.drySequenceBreakers,
+          penalty_repeat: 1.0,
+          penalty_freq: 0,
+          penalty_present: 0,
           ignore_eos: false,
-          ...(settings.logitBias.length > 0 ? { logit_bias: settings.logitBias } : {}),
           seed: settings.seed,
-          xtc_probability: settings.xtcProbability,
-          xtc_threshold: settings.xtcThreshold,
-          typical_p: settings.typicalP,
-          enable_thinking: settings.enableThinking,
+          enable_thinking: false,
         },
         (data) => {
           if (this.isCancelled) {
@@ -805,22 +828,19 @@ class LlamaManager {
         }
       );
 
-      const title = fullResponse.trim().replace(/['"]/g, '').substring(0, TITLE_GENERATION_CONFIG.maxTitleLength);
+      const title = fullResponse.trim().replace(/['"]/g, '').replace(/<\/?think[^>]*>/g, '').trim().substring(0, TITLE_GENERATION_CONFIG.maxTitleLength);
+      console.log('title_gen_result', { title: title || 'empty', rawLen: fullResponse.length });
       if (title) {
         return title;
       }
       
-      const now = new Date();
-      const dateStr = now.toLocaleDateString();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return `Chat ${dateStr} ${timeStr}`;
+      throw new Error('empty_title');
     } catch (error) {
-      const now = new Date();
-      const dateStr = now.toLocaleDateString();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      return `Chat ${dateStr} ${timeStr}`;
+      console.log('title_gen_error', error instanceof Error ? error.message : 'unknown');
+      throw error;
     } finally {
       this.isCancelled = false;
+      this.releaseGenLock();
     }
   }
 

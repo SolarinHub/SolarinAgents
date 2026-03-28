@@ -37,14 +37,15 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
   const targetScreen = routeParams?.screen;
   const modelRoute = targetScreen === 'ModelTab' ? { params: routeParams?.params } : undefined;
 
-  const [sidebarWidth, setSidebarWidth] = useState(screenWidth * 0.3);
+  const [sidebarWidth, setSidebarWidth] = useState(screenWidth * 0.45);
   const [isDragging, setIsDragging] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const translateX = useRef(new Animated.Value(0)).current;
   const MIN_SIDEBAR_WIDTH = 200;
   const MAX_SIDEBAR_WIDTH = screenWidth * 0.6;
 
-  const chatWidth = screenWidth - sidebarWidth;
+  const TAB_BAR_W = 85;
+  const chatWidth = screenWidth - sidebarWidth - TAB_BAR_W;
 
   const loadSidebarWidth = async () => {
     try {
@@ -148,13 +149,16 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
     showBeta?: boolean;
   }) => (
     <TouchableOpacity
-      style={styles.tabItem}
+      style={[
+        styles.tabItem,
+        isActive && { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10 },
+      ]}
       onPress={() => setActiveTab(tab)}
     >
       <View style={styles.iconContainer}>
         <MaterialCommunityIcons
           name={icon as any}
-          size={24}
+          size={22}
           color={isActive ? themeColors.tabBarActiveText : themeColors.tabBarInactiveText}
         />
         {showBeta && (
@@ -193,29 +197,17 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
   return (
     <LayoutProvider constrainToChat={true}>
       <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        {/* Sidebar */}
-        <Animated.View style={[
-          styles.sidebar,
+        {/* Vertical Tab Bar */}
+        <View style={[
+          styles.verticalTabBar,
           {
-            width: sidebarWidth,
-            backgroundColor: themeColors.background,
-            transform: [{ translateX }],
+            width: TAB_BAR_W,
+            backgroundColor: themeColors.tabBarBackground,
+            paddingTop: insets.top + 12,
+            paddingBottom: insets.bottom + 12,
           }
         ]}>
-          {/* Tab content */}
-          <View style={styles.tabContent}>
-            {renderSidebarContent()}
-          </View>
-
-          {/* Tab bar at bottom */}
-          <View style={[
-            styles.tabBar,
-            {
-              backgroundColor: themeColors.tabBarBackground,
-              height: 70 + insets.bottom,
-              paddingBottom: insets.bottom,
-            }
-          ]}>
+          <View style={styles.tabList}>
             <TabButton
               tab="models"
               icon={activeTab === 'models' ? 'cube' : 'cube-outline'}
@@ -236,6 +228,20 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
               isActive={activeTab === 'settings'}
             />
           </View>
+        </View>
+
+        {/* Sidebar Content */}
+        <Animated.View style={[
+          styles.sidebar,
+          {
+            width: sidebarWidth,
+            backgroundColor: themeColors.background,
+            transform: [{ translateX }],
+          }
+        ]}>
+          <View style={styles.tabContent}>
+            {renderSidebarContent()}
+          </View>
         </Animated.View>
 
         <PanGestureHandler
@@ -246,7 +252,7 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
             style={[
               styles.dragHandle,
               {
-                left: sidebarWidth - 6,
+                left: TAB_BAR_W + sidebarWidth - 6,
                 transform: [{ translateX }],
               }
             ]}
@@ -261,7 +267,7 @@ export default function WideScreenLayout({}: WideScreenLayoutProps) {
           <Animated.View style={[
             styles.dragStripLine,
             {
-              left: sidebarWidth,
+              left: TAB_BAR_W + sidebarWidth,
               transform: [{ translateX }],
               backgroundColor: themeColors.borderColor,
             }
@@ -292,14 +298,19 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
   },
-  tabBar: {
-    flexDirection: 'row',
-    borderTopWidth: 0,
+  verticalTabBar: {
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  tabList: {
+    gap: 8,
+    alignItems: 'center',
   },
   tabItem: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
   iconContainer: {
     position: 'relative',

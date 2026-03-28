@@ -1,10 +1,14 @@
 import { fs as FileSystem } from './fs';
+import type { Tool, ToolCall } from './tools/ToolRegistry';
+import { openAIImageAdapter, type ImageGenOptions, type GeneratedImage } from './adapters/OpenAIImageAdapter';
+import { openAIFileAdapter } from './adapters/OpenAIFileAdapter';
 
 type ChatMessage = {
   id: string;
   content: string;
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   thinking?: string;
+  toolCallId?: string;
   stats?: {
     duration: number;
     tokens: number;
@@ -16,11 +20,21 @@ export interface OpenAIRequestOptions {
   maxTokens?: number;
   topP?: number;
   model?: string;
+  tools?: Tool[];
 }
+
+export type OpenAIResponse = {
+  fullResponse: string;
+  tokenCount: number;
+  startTime: number;
+  toolCalls?: ToolCall[];
+  imageResult?: GeneratedImage;
+};
 
 export class OpenAIService {
   private apiKeyProvider: (provider: string) => Promise<string | null>;
   private baseUrlProvider: (provider: string) => Promise<string>;
+  private currentProvider = 'chatgpt';
 
   constructor(
     apiKeyProvider: (provider: string) => Promise<string | null>,
@@ -89,6 +103,79 @@ export class OpenAIService {
         };
       }
       
+      if (parsed.type === 'file_upload' && parsed.metadata?.openaiFileId) {
+        const userContent = parsed.userContent || `File uploaded: ${parsed.fileName || 'file'}`;
+        return {
+          role: message.role,
+          content: [
+            { type: 'file', file: { file_id: parsed.metadata.openaiFileId } },
+            { type: 'text', text: userContent },
+          ],
+        };
+      }
+
+      if (parsed.type === 'file_upload' && parsed.metadata?.remoteFileUri) {
+        const fileName = parsed.fileName || 'document';
+        const mimeType = parsed.metadata.mimeType || 'application/octet-stream';
+        const userContent = parsed.userContent || `File uploaded: ${fileName}`;
+        const ext = fileName.toLowerCase().split('.').pop() || '';
+        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        const uploadExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+          'csv', 'txt', 'md', 'html', 'json', 'jsonl'];
+
+        if (imageExts.includes(ext)) {
+          try {
+            const base64 = await FileSystem.readAsStringAsync(
+              parsed.metadata.remoteFileUri,
+              { encoding: FileSystem.EncodingType.Base64 }
+            );
+            return {
+              role: message.role,
+              content: [
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:${mimeType};base64,${base64}` },
+                },
+                { type: 'text', text: userContent },
+              ],
+            };
+          } catch (err) {
+            console.log('openai_file_image_error', err instanceof Error ? err.message : 'unknown');
+          }
+        }
+
+        if (uploadExts.includes(ext)) {
+          try {
+            const result = await openAIFileAdapter.upload(
+              parsed.metadata.remoteFileUri, fileName, 'assistants', this.currentProvider || 'chatgpt'
+            );
+            console.log('openai_file_uploaded', fileName, result.id);
+            return {
+              role: message.role,
+              content: [
+                { type: 'file', file: { file_id: result.id } },
+                { type: 'text', text: userContent },
+              ],
+            };
+          } catch (err) {
+            console.log('openai_file_upload_error', err instanceof Error ? err.message : 'unknown');
+          }
+        }
+
+        try {
+          const text = await FileSystem.readAsStringAsync(parsed.metadata.remoteFileUri);
+          return {
+            role: message.role,
+            content: `--- ${fileName} ---\n${text}\n---\n\n${userContent}`,
+          };
+        } catch {
+          return {
+            role: message.role,
+            content: userContent,
+          };
+        }
+      }
+
       if (parsed.type === 'ocr_result') {
         const instruction = parsed.internalInstruction || '';
         const userPrompt = parsed.userPrompt || '';
@@ -100,6 +187,14 @@ export class OpenAIService {
       }
     } catch (error) {
     }
+
+    if (message.role === 'tool' && message.toolCallId) {
+      return {
+        role: 'tool',
+        tool_call_id: message.toolCallId,
+        content: message.content,
+      };
+    }
     
     return {
       role: message.role,
@@ -107,21 +202,60 @@ export class OpenAIService {
     };
   }
 
+  private needsResponsesApi(messages: any[]): boolean {
+    return messages.some(msg => {
+      if (Array.isArray(msg.content)) {
+        return msg.content.some((block: any) =>
+          block.type === 'file' && block.file?.file_id
+        );
+      }
+      return false;
+    });
+  }
+
+  private toResponsesFormat(messages: any[]): any[] {
+    return messages.map(msg => {
+      if (typeof msg.content === 'string') {
+        return { role: msg.role, content: msg.content };
+      }
+      if (Array.isArray(msg.content)) {
+        const content = msg.content.map((block: any) => {
+          if (block.type === 'text') {
+            return { type: 'input_text', text: block.text };
+          }
+          if (block.type === 'file' && block.file?.file_id) {
+            return { type: 'input_file', file_id: block.file.file_id };
+          }
+          if (block.type === 'file' && block.file?.file_data) {
+            return {
+              type: 'input_file',
+              filename: block.file.filename,
+              file_data: block.file.file_data,
+            };
+          }
+          if (block.type === 'image_url') {
+            return { type: 'input_image', image_url: block.image_url.url };
+          }
+          return block;
+        });
+        return { role: msg.role, content };
+      }
+      return msg;
+    });
+  }
+
   async generateResponse(
     messages: ChatMessage[],
     options: OpenAIRequestOptions = {},
     onToken?: (token: string) => boolean | void,
     provider = 'chatgpt'
-  ): Promise<{
-    fullResponse: string;
-    tokenCount: number;
-    startTime: number;
-  }> {
+  ): Promise<OpenAIResponse> {
     const startTime = Date.now();
     let tokenCount = 0;
     let fullResponse = '';
 
     try {
+      this.currentProvider = provider;
       const apiKey = await this.apiKeyProvider(provider);
       if (!apiKey) {
         throw new Error('OpenAI API key not found. Please set it in Settings.');
@@ -139,22 +273,39 @@ export class OpenAIService {
       }
 
   const baseUrl = await this.baseUrlProvider(provider);
-  const url = `${baseUrl}/chat/completions`;
-      
-      const requestBody = {
-        model,
-        messages: formattedMessages,
-        temperature,
-        max_tokens: maxTokens,
-        top_p: topP,
-        stream: false
-      };
+  const useResponses = this.needsResponsesApi(formattedMessages);
+  const url = useResponses
+    ? `${baseUrl}/responses`
+    : `${baseUrl}/chat/completions`;
+  console.log('openai_api_endpoint', useResponses ? 'responses' : 'chat_completions');
+
+      let requestBody: Record<string, any>;
+      if (useResponses) {
+        requestBody = {
+          model,
+          input: this.toResponsesFormat(formattedMessages),
+          temperature,
+          max_output_tokens: maxTokens,
+          top_p: topP,
+        };
+      } else {
+        requestBody = {
+          model,
+          messages: formattedMessages,
+          temperature,
+          max_tokens: maxTokens,
+          top_p: topP,
+          stream: false,
+        };
+        if (options.tools && options.tools.length > 0) {
+          requestBody.tools = options.tools;
+        }
+      }
 
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       };
-      
       
       const response = await fetch(url, {
         method: 'POST',
@@ -164,6 +315,7 @@ export class OpenAIService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.log('openai_api_error', response.status, errorText.substring(0, 500));
         
         if (response.status === 429 || errorText.includes("quota") || errorText.includes("rate limit") || errorText.includes("insufficient_quota")) {
           throw new Error("QUOTA_EXCEEDED: Your OpenAI API quota has been exceeded. Please try again later or upgrade your API plan.");
@@ -263,6 +415,23 @@ export class OpenAIService {
         }
       } else if (jsonResponse.choices && jsonResponse.choices.length > 0) {
         const choice = jsonResponse.choices[0];
+
+        if (choice.message?.tool_calls && choice.message.tool_calls.length > 0) {
+          const toolCalls: ToolCall[] = choice.message.tool_calls.map((tc: any) => ({
+            id: tc.id,
+            type: tc.type,
+            function: {
+              name: tc.function.name,
+              arguments: tc.function.arguments,
+            },
+          }));
+          return {
+            fullResponse: choice.message.content || '',
+            tokenCount: jsonResponse.usage?.completion_tokens || 0,
+            startTime,
+            toolCalls,
+          };
+        }
         
         if (choice.message && choice.message.content) {
           const text = choice.message.content;
@@ -322,5 +491,13 @@ export class OpenAIService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async generateImage(
+    prompt: string,
+    options: ImageGenOptions = {},
+    provider = 'chatgpt'
+  ): Promise<GeneratedImage> {
+    return openAIImageAdapter.generate(prompt, options, provider);
   }
 } 

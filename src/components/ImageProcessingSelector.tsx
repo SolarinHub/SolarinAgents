@@ -81,9 +81,9 @@ export default function ImageProcessingSelector({
         return;
       }
       
-      const isOnlineModel = ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
+      const isNonLocalModel = ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
       
-      if (isOnlineModel) {
+      if (isNonLocalModel) {
         onModeChange('multimodal');
         onMultimodalReady?.();
         return;
@@ -134,8 +134,8 @@ export default function ImageProcessingSelector({
       case 'ocr':
         return 'Extract text from the image';
       case 'multimodal':
-        const isOnlineModel = selectedModelPath && ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
-        return isOnlineModel ? 'Analyze image content with AI' : 'Analyze image content with AI vision';
+        const isNonLocalModel = selectedModelPath && ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
+        return isNonLocalModel ? 'Analyze image content with AI' : 'Analyze image content with AI vision';
       case null:
       default:
         return '';
@@ -145,8 +145,8 @@ export default function ImageProcessingSelector({
   const canUseMultimodal = (): boolean => {
     if (!selectedModelPath) return false;
     
-    const isOnlineModel = ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
-    if (isOnlineModel) {
+    const isNonLocalModel = ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
+    if (isNonLocalModel) {
       return selectedModelPath !== 'apple-foundation';
     }
     
@@ -156,8 +156,8 @@ export default function ImageProcessingSelector({
   const getMultimodalTitle = (): string => {
     if (!selectedModelPath) return 'Vision Analysis';
     
-    const isOnlineModel = ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
-    return isOnlineModel ? 'Vision Analysis' : 'Multimodal (AI Vision)';
+    const isNonLocalModel = ['gemini', 'chatgpt', 'claude', 'apple-foundation'].includes(selectedModelPath);
+    return isNonLocalModel ? 'Vision Analysis' : 'Multimodal (AI Vision)';
   };
 
   return (

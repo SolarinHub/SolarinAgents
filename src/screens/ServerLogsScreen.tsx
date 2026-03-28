@@ -55,7 +55,6 @@ export default function ServerLogsScreen() {
 
     let masked = value;
     masked = masked.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, '[email]');
-    masked = masked.replace(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g, '[ip]');
     masked = masked.replace(/(Bearer|Token)\s+[A-Za-z0-9\-._~+/]+=*/gi, (_, label) => `${label} [redacted]`);
     masked = masked.replace(/(api[_-]?key|access[_-]?token|secret|password)\s*[:=]\s*([^\s]+)/gi, (match, label) => `${label.toLowerCase()}: [redacted]`);
     masked = masked.replace(/([?&](?:token|key|apikey|api_key|access_token|secret)=)([^&\s]+)/gi, (_, prefix) => `${prefix}[redacted]`);

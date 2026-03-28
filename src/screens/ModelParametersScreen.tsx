@@ -42,15 +42,20 @@ type DialogSettingConfig = {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ModelParameters'>;
 
-export default function ModelParametersScreen({ navigation }: Props) {
+export default function ModelParametersScreen({ navigation, route }: Props) {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
+  const modelName = route.params?.modelName;
+  const isPerModel = !!modelName;
 
   const [settings, setSettings] = useState<ModelSettings>(
     llamaManager.getSettings(),
   );
   const [error, setError] = useState<string | null>(null);
-  const showMlxWarning = Platform.OS === 'ios';
+  const [noExtraBuffers, setNoExtraBuffers] = useState<boolean>(
+    llamaManager.getNoExtraBuffers()
+  );
+  const showMlxWarning = !isPerModel && Platform.OS === 'ios';
 
   const [dialogConfig, setDialogConfig] = useState<{
     visible: boolean;
@@ -170,9 +175,11 @@ export default function ModelParametersScreen({ navigation }: Props) {
             color={currentTheme === 'dark' ? '#FFB300' : '#E65100'}
           />
           <Text style={[styles.noticeText, { color: currentTheme === 'dark' ? '#FFB300' : '#E65100' }]}>
-            {Platform.OS === 'android'
-              ? 'These settings do not apply to remote/cloud models.'
-              : 'These settings do not apply to Apple Intelligence or remote/cloud models.'}
+            {isPerModel
+              ? `Currently applying to: ${modelName.replace('.gguf', '')}`
+              : Platform.OS === 'android'
+                ? 'These settings do not apply to remote/cloud models.'
+                : 'These settings do not apply to Apple Intelligence or remote/cloud models.'}
           </Text>
         </View>
 
@@ -184,6 +191,11 @@ export default function ModelParametersScreen({ navigation }: Props) {
           onMaxTokensPress={handleMaxTokens}
           onDialogOpen={handleOpenDialog}
           showMlxWarning={showMlxWarning}
+          noExtraBuffers={noExtraBuffers}
+          onToggleNoExtraBuffers={async (enabled) => {
+            setNoExtraBuffers(enabled);
+            await llamaManager.setNoExtraBuffers(enabled);
+          }}
         />
 
         <ModelSettingsControls

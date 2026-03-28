@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { theme } from '../../constants/theme';
@@ -24,6 +24,8 @@ type ModelSettingsSamplingProps = {
   onMaxTokensPress: () => void;
   onDialogOpen: (config: any) => void;
   showMlxWarning?: boolean;
+  noExtraBuffers?: boolean;
+  onToggleNoExtraBuffers?: (enabled: boolean) => void;
 };
 
 const ModelSettingsSampling = ({
@@ -34,6 +36,8 @@ const ModelSettingsSampling = ({
   onMaxTokensPress,
   onDialogOpen,
   showMlxWarning,
+  noExtraBuffers,
+  onToggleNoExtraBuffers,
 }: ModelSettingsSamplingProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
@@ -83,6 +87,33 @@ const ModelSettingsSampling = ({
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />
       </TouchableOpacity>
+
+      {onToggleNoExtraBuffers && (
+        <View style={[styles.settingItem, styles.settingItemBorder]}>
+          <View style={styles.settingLeft}>
+            <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
+              <MaterialCommunityIcons name="memory" size={22} color={iconColor} />
+            </View>
+            <View style={styles.settingTextContainer}>
+              <Text style={[styles.settingText, { color: themeColors.text }]}>
+                Disable Extra Buffers
+              </Text>
+              <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
+                Reduces memory usage by skipping weight repacking buffers. Prompt processing may be slower.
+              </Text>
+              {showMlxWarning && (
+                <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
+              )}
+            </View>
+          </View>
+          <Switch
+            value={Boolean(noExtraBuffers)}
+            onValueChange={onToggleNoExtraBuffers}
+            trackColor={{ false: themeColors.borderColor, true: themeColors.primary + '80' }}
+            thumbColor={noExtraBuffers ? themeColors.primary : themeColors.background}
+          />
+        </View>
+      )}
 
       <SettingSlider
         label="Temperature"
@@ -307,6 +338,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
     color: '#FF3B30',
+  },
+  unsupportedText: {
+    fontSize: 11,
+    color: '#FF9500',
+    fontWeight: '500',
+    marginTop: 4,
   },
 });
 

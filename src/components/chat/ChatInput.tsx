@@ -32,6 +32,9 @@ import type { ProviderType } from '../../services/ModelManagementService';
 import chatManager from '../../utils/ChatManager';
 import { uuidv4 } from 'react-native-rag';
 import { OnlineModelService } from '../../services/OnlineModelService';
+import { getMimeType, isOpenAIUploadable } from '../../services/adapters/OpenAIFileAdapter';
+import { isClaudeUploadable } from '../../services/adapters/ClaudeFileAdapter';
+import { isGeminiUploadable } from '../../services/adapters/GeminiFileAdapter';
 
 type ChatInputProps = {
   onSend: (text: string) => void;
@@ -102,6 +105,7 @@ export default function ChatInput({
   const [pendingFileForMultimodal, setPendingFileForMultimodal] = useState<{uri: string, name?: string} | null>(null);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [useRagForUpload, setUseRagForUpload] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<{uri: string, name: string} | null>(null);
   
   const inputRef = useRef<TextInput>(null);
   const attachmentMenuAnim = useRef(new Animated.Value(0)).current;
@@ -111,9 +115,8 @@ export default function ChatInput({
   const themeColors = useMemo(() => theme[currentTheme as 'light' | 'dark'], [currentTheme]);
   const isDark = currentTheme === 'dark';
   const isRemoteModel = isRemoteProvider(selectedModelPath);
-  const isAppleFoundation = selectedModelPath === 'apple-foundation';
   const ragEnabledForCurrentModel = !!selectedModelPath && !isRemoteModel;
-  const ragToggleDisabled = isAppleFoundation;
+  const ragToggleDisabled = false;
 
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -243,6 +246,42 @@ export default function ChatInput({
     const lowerCaseName = fileName.toLowerCase();
     return imageExtensions.some(ext => lowerCaseName.endsWith(ext));
   };
+
+  const getRemoteFileSupport = useCallback((fileName: string): {
+    supported: boolean;
+    providerLabel: string;
+  } => {
+    const baseProvider = OnlineModelService.getBaseProvider(selectedModelPath || '');
+
+    if (baseProvider === 'chatgpt') {
+      const supported = isImageFile(fileName) || isOpenAIUploadable(fileName);
+      return {
+        supported,
+        providerLabel: 'OpenAI',
+      };
+    }
+
+    if (baseProvider === 'claude') {
+      const supported = isImageFile(fileName) || isClaudeUploadable(fileName);
+      return {
+        supported,
+        providerLabel: 'Claude',
+      };
+    }
+
+    if (baseProvider === 'gemini') {
+      const supported = isImageFile(fileName) || isGeminiUploadable(fileName);
+      return {
+        supported,
+        providerLabel: 'Gemini',
+      };
+    }
+
+    return {
+      supported: true,
+      providerLabel: 'Remote provider',
+    };
+  }, [selectedModelPath]);
 
   const showMmProjSelector = async (action: 'camera' | 'file') => {
     setPendingMultimodalAction(action);
@@ -407,7 +446,7 @@ export default function ChatInput({
   };
 
   const handleSend = useCallback(() => {
-    if (!hasText) return;
+    if (!hasText && !pendingAttachment) return;
 
     if (isEditing) {
       onSaveEdit?.(text);
@@ -434,6 +473,17 @@ export default function ChatInput({
       );
       return;
     }
+
+    if (pendingAttachment) {
+      const prompt = text.trim();
+      const attachment = pendingAttachment;
+      setText('');
+      setInputHeight(52);
+      setShowAttachmentMenu(false);
+      setPendingAttachment(null);
+      handleRemoteUpload(attachment.uri, attachment.name, prompt);
+      return;
+    }
     
     try {
       onSend(text);
@@ -443,7 +493,7 @@ export default function ChatInput({
     setText('');
     setInputHeight(52);
     setShowAttachmentMenu(false);
-  }, [text, onSend, selectedModelPath, isModelLoading, hasText, isEditing, onSaveEdit]);
+  }, [text, onSend, selectedModelPath, isModelLoading, hasText, isEditing, onSaveEdit, pendingAttachment, handleRemoteUpload]);
 
   const handleContentSizeChange = useCallback((event: any) => {
     const height = Math.min(120, Math.max(52, event.nativeEvent.contentSize.height + 8));
@@ -543,6 +593,7 @@ export default function ChatInput({
       const sanitizedPrompt = userPrompt ? userPrompt.trim() : '';
       const userMessage = sanitizedPrompt || `File uploaded: ${displayName}`;
       console.log('file_upload_start', displayName, useRagFlag ? 'rag_on' : 'rag_off');
+
       const buildInternalInstruction = (fileBody?: string) => {
         const sections: string[] = [`You're reading a file named: ${displayName}`];
         if (sanitizedPrompt) {
@@ -609,8 +660,33 @@ export default function ChatInput({
       ragCancelRef.current.cancelled = false;
       console.log('file_upload_complete', displayName, ragCancelled ? 'cancelled' : ragHandled ? 'rag' : 'fallback');
     },
-    [onSend, processRagDocument]
+    [onSend, processRagDocument, selectedModelPath, selectedFile, showDialog]
   );
+
+  const handleRemoteUpload = useCallback(async (fileUri: string, fileName: string, userPrompt?: string) => {
+    const displayName = fileName || 'document';
+    const promptText = userPrompt?.trim() || '';
+    const userContent = promptText || `File uploaded: ${displayName}`;
+
+    try {
+      const uploadsDir = `${FileSystem.documentDirectory}uploads`;
+      await FileSystem.makeDirectoryAsync(uploadsDir, { intermediates: true });
+      const destPath = `${uploadsDir}/${uuidv4()}_${displayName}`;
+      await FileSystem.copyAsync({ from: fileUri, to: destPath });
+
+      const mimeType = getMimeType(displayName);
+      onSend(JSON.stringify({
+        type: 'file_upload',
+        fileName: displayName,
+        userContent,
+        metadata: { remoteFileUri: destPath, mimeType },
+      }));
+      console.log('remote_upload_file', displayName);
+    } catch (error) {
+      console.log('remote_upload_error', error instanceof Error ? error.message : 'unknown');
+      showDialog('Upload Error', 'Failed to process file.');
+    }
+  }, [selectedModelPath, onSend, showDialog]);
 
   const markRagDisabled = useCallback((raw: string) => {
     try {
@@ -743,23 +819,42 @@ export default function ChatInput({
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
+        const fileName = file.name || 'document';
+
+        if (isRemoteModel) {
+          const support = getRemoteFileSupport(fileName);
+          if (!support.supported) {
+            showDialog(
+              'Unsupported File Type',
+              `${support.providerLabel} does not support this file type.`
+            );
+            return;
+          }
+        }
         
-        if (isImageFile(file.name) && !checkMultimodalSupport()) {
+        if (isImageFile(fileName) && !checkMultimodalSupport()) {
           const isOnlineModel = isOnlineProvider(selectedModelPath);
           const isMLX = engineService.getEngineForModel(selectedModelPath!) === 'mlx';
           if (!isOnlineModel && !isMLX) {
             setPendingFileForMultimodal({
               uri: file.uri,
-              name: file.name
+              name: fileName
             });
             showMmProjSelector('file');
             return;
           }
         }
+
+        if (isRemoteModel && !isImageFile(fileName)) {
+          setPendingAttachment({ uri: file.uri, name: fileName });
+          setShowAttachmentMenu(false);
+          setTimeout(() => inputRef.current?.focus(), 100);
+          return;
+        }
         
         setSelectedFile({
           uri: file.uri,
-          name: file.name
+          name: fileName
         });
         setFileModalVisible(true);
         setShowAttachmentMenu(false);
@@ -767,7 +862,7 @@ export default function ChatInput({
     } catch (error) {
       showDialog('Error', 'Could not pick the document. Please try again.');
     }
-  }, [selectedModelPath, isMultimodalEnabled]);
+  }, [selectedModelPath, isMultimodalEnabled, isRemoteModel, getRemoteFileSupport, showDialog]);
 
   const closeFileModal = useCallback(() => {
     setFileModalVisible(false);
@@ -808,18 +903,20 @@ export default function ChatInput({
     isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.4)'
   , [isDark]);
 
+  const canSend = hasText || !!pendingAttachment;
+
   const sendButtonStyle = useMemo(() => [
     styles.sendButton,
     {
-      backgroundColor: hasText 
+      backgroundColor: canSend 
         ? getThemeAwareColor('#4a0660', currentTheme)
         : isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
     }
-  ], [hasText, currentTheme, isDark]);
+  ], [canSend, currentTheme, isDark]);
 
   const sendIconColor = useMemo(() => 
-    hasText ? '#ffffff' : isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'
-  , [hasText, isDark]);
+    canSend ? '#ffffff' : isDark ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'
+  , [canSend, isDark]);
 
   const attachmentButtonStyle = useMemo(() => [
     styles.attachmentButton,
@@ -907,6 +1004,48 @@ export default function ChatInput({
             </Animated.View>
           )}
 
+          {pendingAttachment && (() => {
+            const ext = pendingAttachment.name.split('.').pop()?.toLowerCase() || '';
+            const typeColors: Record<string, string> = {
+              pdf: '#FF5252', doc: '#2196F3', docx: '#2196F3',
+              xls: '#4CAF50', xlsx: '#4CAF50', ppt: '#FF9800', pptx: '#FF9800',
+              jpg: '#9C27B0', jpeg: '#9C27B0', png: '#9C27B0', gif: '#9C27B0',
+              zip: '#795548', rar: '#795548', '7z': '#795548',
+              js: '#FFC107', ts: '#FFC107', py: '#3F51B5',
+              html: '#FF5722', css: '#FF5722',
+            };
+            const typeBg = typeColors[ext] || '#9E9E9E';
+            const typeLabel = ext ? (ext.length > 4 ? ext.substring(0, 4) : ext).toUpperCase() : 'FILE';
+            return (
+              <View style={styles.attachmentChip}>
+                <View style={[styles.pendingFileRow, { backgroundColor: themeColors.borderColor }]}>
+                  <View style={[styles.pendingFileIcon, { backgroundColor: typeBg }]}>
+                    <Text style={styles.pendingFileTypeText}>{typeLabel}</Text>
+                  </View>
+                  <View style={styles.pendingFileInfo}>
+                    <Text style={[styles.pendingFileName, { color: themeColors.text }]} numberOfLines={1} ellipsizeMode="middle">
+                      {pendingAttachment.name}
+                    </Text>
+                    <Text style={[styles.pendingFileSubtitle, { color: themeColors.secondaryText }]}>
+                      File attachment
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setPendingAttachment(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.pendingFileClose}
+                  >
+                    <MaterialCommunityIcons
+                      name="close-circle"
+                      size={18}
+                      color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)'}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })()}
+
           <View style={styles.inputWrapper}>
             {!isEditing && (
               <TouchableOpacity 
@@ -978,7 +1117,7 @@ export default function ChatInput({
               <TouchableOpacity 
                 style={sendButtonStyle} 
                 onPress={handleSend}
-                disabled={!hasText || disabled}
+                disabled={!canSend || disabled}
                 activeOpacity={0.7}
               >
                 <MaterialCommunityIcons 
@@ -1310,6 +1449,47 @@ const styles = StyleSheet.create({
   editingActions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  attachmentChip: {
+    marginBottom: 8,
+    width: '100%',
+  },
+  pendingFileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  pendingFileIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  pendingFileTypeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  pendingFileInfo: {
+    flex: 1,
+    marginLeft: 4,
+  },
+  pendingFileName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pendingFileSubtitle: {
+    fontSize: 12,
+    opacity: 0.7,
+    marginTop: 2,
+  },
+  pendingFileClose: {
+    padding: 4,
+    marginLeft: 8,
   },
   editButton: {
     width: 40,

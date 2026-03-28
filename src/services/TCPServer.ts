@@ -112,11 +112,8 @@ export class TCPServer {
         this.handleConnection(socket);
       });
 
-      this.server.listen({ port: this.port, host: '0.0.0.0' }, async () => {
-        this.localIP = await this.detectLocalIP();
+      this.server.listen({ port: this.port, host: '0.0.0.0' }, () => {
         this.isRunning = true;
-        
-        logger.info(`tcp_server_started port:${this.port} ip:${this.localIP}`, 'server');
       });
 
       this.server.on('error', (error: Error) => {
@@ -124,6 +121,9 @@ export class TCPServer {
       });
 
       await this.waitForServerStart();
+      this.localIP = await this.detectLocalIP();
+
+      logger.info(`tcp_server_started port:${this.port} ip:${this.localIP}`, 'server');
 
       return {
         isRunning: true,
@@ -150,7 +150,6 @@ export class TCPServer {
       setTimeout(() => {
         clearInterval(checkInterval);
         if (!this.isRunning) {
-          this.localIP = '0.0.0.0';
           this.isRunning = true;
         }
         resolve();

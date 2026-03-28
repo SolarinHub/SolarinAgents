@@ -6,7 +6,7 @@ const caps: EngineCaps = {
   embeddings: false,
   vision: false,
   audio: false,
-  rag: false,
+  rag: true,
   grammar: false,
   jinja: false,
   dry: false,

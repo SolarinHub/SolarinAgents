@@ -22,7 +22,7 @@ import MaxTokensDialog from '../components/MaxTokensDialog';
 import StopWordsDialog from '../components/StopWordsDialog';
 import ModelSettingDialog from '../components/ModelSettingDialog';
 import AppHeader from '../components/AppHeader';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types/navigation';
 
 type ModelSettingsScreenRouteProp = RouteProp<RootStackParamList, 'ModelSettings'>;
@@ -43,6 +43,7 @@ export default function ModelSettingsScreen() {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
   const route = useRoute<ModelSettingsScreenRouteProp>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   
   const { modelName, modelPath } = route.params;
   
@@ -263,6 +264,7 @@ export default function ModelSettingsScreen() {
                 onDrySequenceBreakersPress={() => {}}
                 onDialogOpen={handleDialogOpen}
                 defaultExpanded={false}
+                onModelParametersPress={() => navigation.navigate('ModelParameters', { modelName })}
               />
             </View>
           </View>

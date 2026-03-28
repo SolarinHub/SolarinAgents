@@ -44,7 +44,7 @@ export const LLAMA_INIT_CONFIG = {
   n_gpu_layers: 99,
   flash_attn_type: Platform.OS === 'ios' ? 'auto' : 'off',
   kv_unified: true,
-  image_max_tokens: 512,
+  no_extra_bufts: false,
   devices: undefined,
   embedding: true,
   ctx_shift: false,

@@ -32,6 +32,7 @@ export type Chat = {
   branchPointIndex?: number;
   forkedFromChatId?: string;
   forkPointIndex?: number;
+  pinned?: boolean;
 };
 
 class ChatManager {
@@ -95,25 +96,42 @@ class ChatManager {
   }
 
   getAllChats(): Chat[] {
-    const nonEmptyChats = this.cache.filter(chat => chat.messages.length > 0);
+    const nonEmptyChats = this.cache.filter(chat => chat.messages.length > 0 && !chat.forkedFromChatId);
     return nonEmptyChats.sort((a, b) => b.timestamp - a.timestamp);
   }
 
   getRootChats(): Chat[] {
     return this.cache
-      .filter(chat => chat.messages.length > 0 && !chat.parentChatId)
+      .filter(chat => chat.messages.length > 0 && !chat.parentChatId && !chat.forkedFromChatId)
       .sort((a, b) => {
+        const aPinned = a.pinned ? 1 : 0;
+        const bPinned = b.pinned ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned;
         const aLatest = this.getLatestBranchTimestamp(a.id);
         const bLatest = this.getLatestBranchTimestamp(b.id);
         return bLatest - aLatest;
       });
   }
 
+  async togglePin(chatId: string): Promise<boolean> {
+    try {
+      await this.ensureInitialized();
+      const chat = this.getChatById(chatId);
+      if (!chat) return false;
+      chat.pinned = !chat.pinned;
+      await this.saveChat(chat);
+      this.notifyListeners();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private getLatestBranchTimestamp(rootId: string): number {
     const root = this.getChatById(rootId);
     let latest = root?.timestamp ?? 0;
     for (const c of this.cache) {
-      if (c.parentChatId === rootId && c.timestamp > latest) {
+      if ((c.parentChatId === rootId || c.forkedFromChatId === rootId) && c.timestamp > latest) {
         latest = c.timestamp;
       }
     }
@@ -123,10 +141,10 @@ class ChatManager {
   getLatestBranch(rootId: string): Chat | null {
     const root = this.getChatById(rootId);
     if (!root) return null;
-    const branches = this.cache.filter(c => c.parentChatId === rootId);
-    if (branches.length === 0) return root;
-    branches.sort((a, b) => b.timestamp - a.timestamp);
-    return branches[0].timestamp >= root.timestamp ? branches[0] : root;
+    const related = this.cache.filter(c => c.parentChatId === rootId || c.forkedFromChatId === rootId);
+    if (related.length === 0) return root;
+    related.sort((a, b) => b.timestamp - a.timestamp);
+    return related[0].timestamp >= root.timestamp ? related[0] : root;
   }
 
   getBranchCount(rootId: string): number {
@@ -859,26 +877,26 @@ class ChatManager {
   }
 
   private async generateTitleForCurrentChat(userMessage: string): Promise<void> {
-    if (!this.currentChatId) return;
+    const chatId = this.currentChatId;
+    if (!chatId) return;
 
-    const chat = this.getChatById(this.currentChatId);
+    const chat = this.getChatById(chatId);
     if (!chat) return;
 
-    try {
-      setTimeout(async () => {
-        try {
-          const title = await this.generateChatTitle(userMessage);
-          const chatToUpdate = this.getChatById(this.currentChatId!);
-          if (chatToUpdate && chatToUpdate.messages.filter(m => m.role === 'user').length === 1) {
-            chatToUpdate.title = title;
-            await this.saveChat(chatToUpdate);
-            this.notifyListeners();
-          }
-        } catch (error) {
+    setTimeout(async () => {
+      try {
+        const title = await this.generateChatTitle(userMessage);
+        const chatToUpdate = this.getChatById(chatId);
+        if (chatToUpdate && chatToUpdate.messages.filter(m => m.role === 'user').length === 1) {
+          chatToUpdate.title = title;
+          await this.saveChat(chatToUpdate);
+          this.notifyListeners();
+          console.log('title_saved', title);
         }
-      }, 1000);
-    } catch (error) {
-    }
+      } catch (error) {
+        console.log('title_gen_failed', error instanceof Error ? error.message : 'unknown');
+      }
+    }, 1000);
   }
 
   async generateChatTitle(userMessage: string): Promise<string> {
