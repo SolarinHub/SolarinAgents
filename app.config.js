@@ -25,7 +25,7 @@ export default {
       supportsTablet: true,
       requireFullScreen: false,
       bundleIdentifier: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra",
-      buildNumber: "292",
+      buildNumber: "293",
       runtimeVersion: "0.8.7",
       infoPlist: {
         UIBackgroundModes: [
@@ -55,7 +55,7 @@ export default {
       scheme: APP_ENV === 'development' ? "com.gorai.inferra.dev" : "com.gorai.inferra"
     },
     android: {
-      versionCode: 292,
+      versionCode: 293,
       predictiveBackGestureEnabled: false,
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
