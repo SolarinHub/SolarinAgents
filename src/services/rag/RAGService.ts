@@ -440,42 +440,12 @@ class RAGServiceClass {
     }
 
     console.log('rag_verify_embeddings');
-    try {
-      const embedFn = engineService.mgr().embed;
-      if (!embedFn) {
-        throw new Error('Embeddings not supported by current engine');
-      }
-      await embedFn('__rag_probe__');
-      console.log('rag_embeddings_ok');
-      return;
-    } catch (error) {
-      console.log('rag_embeddings_failed', error instanceof Error ? error.message : 'unknown');
-      const modelPath = engineService.getActiveModelPath();
-      if (!modelPath) {
-        throw error instanceof Error ? error : new Error('Unable to generate embeddings');
-      }
-
-      if (engineService.getEngineForModel(modelPath) !== 'llama') {
-        throw error instanceof Error ? error : new Error('Embeddings not supported by current engine');
-      }
-
-      console.log('rag_reload_model');
-      const projectorPath = llamaManager.getMultimodalProjectorPath();
-      await engineService.initModel(modelPath, projectorPath ?? undefined);
-      try {
-        const embedFn2 = engineService.mgr().embed;
-        if (!embedFn2) {
-          throw new Error('Embeddings not supported by current engine');
-        }
-        await embedFn2('__rag_probe__');
-        console.log('rag_embeddings_ok_after_reload');
-      } catch (finalError) {
-        console.log('rag_embeddings_unsupported');
-        throw finalError instanceof Error && finalError.message
-          ? finalError
-          : new Error('Current model does not support embeddings');
-      }
+    const embedFn = engineService.mgr().embed;
+    if (!embedFn) {
+      throw new Error('Embeddings not supported by current engine');
     }
+    await embedFn('__rag_probe__');
+    console.log('rag_embeddings_ok');
   }
 
   private createRemoteEmbeddings(provider: ProviderType) {
