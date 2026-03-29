@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Animated, AppState, AppStateStatus, Platform } from 'react-native';
+import { Animated, AppState, AppStateStatus, InteractionManager, Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
@@ -158,6 +158,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       setImportingModelName(file.name);
       
       try {
+        await new Promise<void>(resolve => InteractionManager.runAfterInteractions(() => resolve()));
         await modelDownloader.linkExternalModel(file.uri, file.name);
         setIsLoading(false);
         setImportingModelName(null);
@@ -244,6 +245,7 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
     try {
       setIsLoading(true);
       setIsExporting(true);
+      await new Promise<void>(resolve => InteractionManager.runAfterInteractions(() => resolve()));
       await modelDownloader.exportModel(modelPath, modelName);
       setIsLoading(false);
       setIsExporting(false);

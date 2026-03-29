@@ -17,13 +17,6 @@ export default {
       enabled: true,
       checkAutomatically: 'NEVER',
       url: "https://u.expo.dev/a539a082-58a3-4f29-9bb7-107913124e7d",
-      ...(APP_ENV === 'production' || APP_ENV === 'preview' ? {
-        codeSigningCertificate: "./keys/certificate.pem",
-        codeSigningMetadata: {
-          keyid: "main",
-          alg: "rsa-v1_5-sha256",
-        },
-      } : {}),
     },
     assetBundlePatterns: [
       "**/*"
@@ -108,7 +101,7 @@ export default {
     extra: {
       autoUpdate: true,
       changelog: [
-        "Updated server homepage documentation",
+        "Resolved critical crashes & bugfixes.",
       ],
       GEMINI_API_KEY: process.env.GEMINI_API_KEY,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY,
