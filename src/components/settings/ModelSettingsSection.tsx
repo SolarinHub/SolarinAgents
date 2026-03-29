@@ -50,7 +50,6 @@ type ModelSettingsSectionProps = {
   engineEnabled?: Record<'llama' | 'mlx', boolean>;
   onEngineToggle?: (engine: 'llama' | 'mlx', enabled: boolean) => void;
   onOpenSystemPromptDialog?: () => void;
-  onResetSystemPrompt?: () => void;
   enableRemoteModels?: boolean;
   onToggleRemoteModels?: (enabled: boolean) => void;
   gpuConfig?: GpuConfig;
@@ -72,7 +71,6 @@ const ModelSettingsSection = ({
   engineEnabled,
   onEngineToggle,
   onOpenSystemPromptDialog,
-  onResetSystemPrompt,
   enableRemoteModels,
   onToggleRemoteModels,
   gpuConfig,
@@ -91,7 +89,6 @@ const ModelSettingsSection = ({
     <SettingsSection title="MODEL SETTINGS">
       <ModelSettingsCore
         onOpenSystemPromptDialog={onOpenSystemPromptDialog}
-        onResetSystemPrompt={onResetSystemPrompt}
         systemPromptModified={defaultSettings.systemPrompt ? modelSettings.systemPrompt !== defaultSettings.systemPrompt : false}
         enableRemoteModels={enableRemoteModels}
         onToggleRemoteModels={onToggleRemoteModels}

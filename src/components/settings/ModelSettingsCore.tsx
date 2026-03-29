@@ -20,7 +20,6 @@ export type GpuConfig = {
 
 type ModelSettingsCoreProps = {
   onOpenSystemPromptDialog?: () => void;
-  onResetSystemPrompt?: () => void;
   systemPromptModified?: boolean;
   enableRemoteModels?: boolean;
   onToggleRemoteModels?: (enabled: boolean) => void;
@@ -37,7 +36,6 @@ type ModelSettingsCoreProps = {
 
 const ModelSettingsCore = ({
   onOpenSystemPromptDialog,
-  onResetSystemPrompt,
   systemPromptModified,
   enableRemoteModels,
   onToggleRemoteModels,
@@ -101,15 +99,6 @@ const ModelSettingsCore = ({
               <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
                 Define what should the AI know about you and your preferences
               </Text>
-              {systemPromptModified && onResetSystemPrompt && (
-                <TouchableOpacity
-                  onPress={onResetSystemPrompt}
-                  style={[styles.resetButton, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}
-                >
-                  <MaterialCommunityIcons name="refresh" size={14} color={iconColor} />
-                  <Text style={[styles.resetText, { color: iconColor }]}>Reset to Default</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />

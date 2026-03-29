@@ -38,12 +38,6 @@ export default function SystemPromptDialog({
     onClose();
   };
 
-  const handleReset = () => {
-    setCurrentValue(defaultValue);
-  };
-
-  const showResetButton = currentValue !== defaultValue;
-
   if (!visible) return null;
 
   return (
@@ -85,15 +79,6 @@ export default function SystemPromptDialog({
           />
 
           <View style={styles.footer}>
-            {showResetButton && (
-              <TouchableOpacity
-                style={[styles.resetButton, { backgroundColor: themeColors.primary + '20' }]}
-                onPress={handleReset}
-              >
-                <MaterialCommunityIcons name="refresh" size={20} color={themeColors.primary} />
-                <Text style={[styles.resetText, { color: themeColors.primary }]}>Reset to Default</Text>
-              </TouchableOpacity>
-            )}
             <TouchableOpacity
               style={[styles.saveButton, { backgroundColor: themeColors.primary }]}
               onPress={handleSave}

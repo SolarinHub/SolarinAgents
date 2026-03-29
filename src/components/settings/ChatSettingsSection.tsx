@@ -13,14 +13,12 @@ type ChatSettingsSectionProps = {
     systemPrompt: string;
   };
   onOpenSystemPromptDialog: () => void;
-  onResetSystemPrompt: () => void;
 };
 
 const ChatSettingsSection = ({
   modelSettings,
   defaultSettings,
   onOpenSystemPromptDialog,
-  onResetSystemPrompt
 }: ChatSettingsSectionProps) => {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme];
@@ -43,15 +41,6 @@ const ChatSettingsSection = ({
             <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
               Define what should the AI know about you and your preferences
             </Text>
-            {modelSettings.systemPrompt !== defaultSettings.systemPrompt && (
-              <TouchableOpacity
-                onPress={onResetSystemPrompt}
-                style={[styles.resetButton, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}
-              >
-                <MaterialCommunityIcons name="refresh" size={14} color={iconColor} />
-                <Text style={[styles.resetText, { color: iconColor }]}>Reset to Default</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />

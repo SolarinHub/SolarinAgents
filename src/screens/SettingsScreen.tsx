@@ -751,7 +751,6 @@ export default function SettingsScreen({ navigation }: SettingsScreenProps) {
           engineEnabled={engineEnabled}
           onEngineToggle={handleInferenceEngineToggle}
           onOpenSystemPromptDialog={() => setShowSystemPromptDialog(true)}
-          onResetSystemPrompt={() => handleSettingsChange({ systemPrompt: DEFAULT_SETTINGS.systemPrompt })}
           enableRemoteModels={enableRemoteModels}
           onToggleRemoteModels={handleRemoteModelsToggle}
           gpuConfig={gpuConfig}
