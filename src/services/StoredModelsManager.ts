@@ -10,6 +10,8 @@ import { ModelType, ModelFormat } from '../types/models';
 import { mlxStorageManager } from './MLXStorageManager';
 import { ModelManager } from '@inferrlm/react-native-mlx';
 
+export const SHARE_CANCELLED_ERROR = 'share_cancelled';
+
 export class StoredModelsManager extends EventEmitter {
   private fileManager: FileManager;
   private readonly STORAGE_KEY = 'stored_models_list';
@@ -654,8 +656,8 @@ export class StoredModelsManager extends EventEmitter {
   }
 
   async exportModel(modelPath: string, modelName: string): Promise<void> {
+    let tempFilePath = '';
     try {
-
       const fileInfo = await FileSystem.getInfoAsync(modelPath);
       if (!fileInfo.exists) {
         throw new Error('Model file does not exist');
@@ -672,24 +674,34 @@ export class StoredModelsManager extends EventEmitter {
         await FileSystem.makeDirectoryAsync(tempDir, { intermediates: true });
       }
 
-      const tempFilePath = tempDir + modelName;
+      tempFilePath = `${tempDir}${Date.now()}-${modelName}`;
       
       await FileSystem.copyAsync({
         from: modelPath,
         to: tempFilePath
       });
 
-
-      await Sharing.shareAsync(tempFilePath, {
-        mimeType: 'application/octet-stream',
-        dialogTitle: `Export ${modelName}`,
-      });
+      try {
+        await Sharing.shareAsync(tempFilePath, {
+          mimeType: 'application/octet-stream',
+          dialogTitle: `Export ${modelName}`,
+        });
+      } catch (error) {
+        const raw = (error as { message?: string } | undefined)?.message ?? String(error ?? '');
+        const message = raw.toLowerCase();
+        if (message.includes('cancel')) {
+          throw new Error(SHARE_CANCELLED_ERROR);
+        }
+        throw error;
+      }
 
       
       this.emit('modelExported', { modelName, tempFilePath });
 
-    } catch (error) {
-      throw error;
+    } finally {
+      if (tempFilePath) {
+        await FileSystem.deleteAsync(tempFilePath, { idempotent: true }).catch(() => {});
+      }
     }
   }
 }

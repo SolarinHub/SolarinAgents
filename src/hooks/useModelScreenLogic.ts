@@ -15,6 +15,7 @@ import { getUserFromSecureStorage, logoutUser } from '../services/FirebaseServic
 import { getActiveDownloadsCount } from '../utils/ModelUtils';
 import { StoredModel } from '../services/ModelDownloaderTypes';
 import { ShowDialogFn } from './useDialog';
+import { SHARE_CANCELLED_ERROR } from '../services/StoredModelsManager';
 
 const BACKGROUND_DOWNLOAD_TASK = 'background-download-task';
 const isAndroid = Platform.OS === 'android';
@@ -56,6 +57,11 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
   const [isExporting, setIsExporting] = useState(false);
   const [showStorageWarningDialog, setShowStorageWarningDialog] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+
+  const isShareCancelledError = (error: unknown): boolean => {
+    const msg = (error as { message?: string } | undefined)?.message ?? String(error ?? '');
+    return msg.toLowerCase().includes(SHARE_CANCELLED_ERROR);
+  };
   
   const buttonScale = useRef(new Animated.Value(1)).current;
   const prevActiveCount = useRef(0);
@@ -250,6 +256,9 @@ export const useModelScreenLogic = (navigation: any, routeParams?: ModelRoutePar
       await new Promise<void>(resolve => InteractionManager.runAfterInteractions(() => resolve()));
       await modelDownloader.exportModel(modelPath, modelName);
     } catch (error) {
+      if (isShareCancelledError(error)) {
+        return;
+      }
       showDialog('Share Failed', `Failed to share ${modelName}. Please try again.`);
     } finally {
       setIsLoading(false);
