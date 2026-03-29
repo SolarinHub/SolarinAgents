@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, useWindowDimensions } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useTheme } from '../context/ThemeContext';
 import { theme } from '../constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -33,45 +34,31 @@ export default function ModelSettingDialog({
   const themeColors = theme[currentTheme];
   const { width } = useWindowDimensions();
   const modalWidth = Math.min(width - 48, 560);
-  const [currentValue, setCurrentValue] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [currentValue, setCurrentValue] = useState(value);
 
   useEffect(() => {
     if (visible) {
-      setCurrentValue(formatValue(value));
-      setError(null);
+      setCurrentValue(value);
     }
   }, [visible, value]);
 
   const handleSave = () => {
-    const numValue = parseFloat(currentValue);
-    if (isNaN(numValue)) {
-      setError('Please enter a valid number');
-      return;
-    }
-    if (numValue < minimumValue || numValue > maximumValue) {
-      setError(`Value must be between ${formatValue(minimumValue)} and ${formatValue(maximumValue)}`);
-      return;
-    }
-    onSave(numValue);
+    onSave(currentValue);
     onClose();
   };
 
   const handleReset = () => {
-    setCurrentValue(formatValue(defaultValue));
-    setError(null);
+    setCurrentValue(defaultValue);
   };
 
   const formatValue = (val: number) => {
     return step >= 1 ? val.toFixed(0) : val.toFixed(2);
   };
 
-  const handleChangeText = (text: string) => {
-    setCurrentValue(text);
-    setError(null);
-  };
-
-  const showResetButton = parseFloat(currentValue) !== defaultValue;
+  const showResetButton = Math.abs(currentValue - defaultValue) > 0.001;
+  const badgeBg = currentTheme === 'dark'
+    ? 'rgba(255, 255, 255, 0.15)'
+    : themeColors.primary + '15';
 
   if (!visible) return null;
 
@@ -95,35 +82,33 @@ export default function ModelSettingDialog({
             {description}
           </Text>
 
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: themeColors.text,
-                backgroundColor: themeColors.borderColor + '40',
-                borderColor: error ? '#FF3B30' : themeColors.borderColor,
-              },
-            ]}
-            value={currentValue}
-            onChangeText={handleChangeText}
-            placeholder={`Enter value (${formatValue(minimumValue)}-${formatValue(maximumValue)})`}
-            placeholderTextColor={themeColors.secondaryText}
-            keyboardType="numeric"
-          />
-
-          {error && (
-            <Text style={styles.errorText}>
-              {error}
-            </Text>
-          )}
-
-          <View style={styles.rangeContainer}>
-            <Text style={[styles.rangeText, { color: themeColors.secondaryText }]}>
-              Range: {formatValue(minimumValue)} - {formatValue(maximumValue)}
-            </Text>
-            <Text style={[styles.rangeText, { color: themeColors.secondaryText }]}>
-              Default: {formatValue(defaultValue)}
-            </Text>
+          <View style={styles.sliderSection}>
+            <View style={[styles.valueBadge, { backgroundColor: badgeBg }]}>
+              <Text style={[styles.valueBadgeText, { color: themeColors.primary }]}>
+                {formatValue(currentValue)}
+              </Text>
+            </View>
+            <Slider
+              style={styles.slider}
+              minimumValue={minimumValue}
+              maximumValue={maximumValue}
+              step={step}
+              value={currentValue}
+              onValueChange={setCurrentValue}
+              minimumTrackTintColor={themeColors.primary}
+              thumbTintColor={themeColors.primary}
+            />
+            <View style={styles.rangeRow}>
+              <Text style={[styles.rangeLabel, { color: themeColors.secondaryText }]}>
+                {formatValue(minimumValue)}
+              </Text>
+              <Text style={[styles.rangeLabel, { color: themeColors.secondaryText }]}>
+                Default: {formatValue(defaultValue)}
+              </Text>
+              <Text style={[styles.rangeLabel, { color: themeColors.secondaryText }]}>
+                {formatValue(maximumValue)}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.footer}>
@@ -175,30 +160,34 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  input: {
-    width: '100%',
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#FF3B30',
-    marginBottom: 8,
-  },
-  rangeContainer: {
+  sliderSection: {
     marginBottom: 24,
     alignItems: 'center',
-    gap: 4,
   },
-  rangeText: {
-    fontSize: 14,
+  valueBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  valueBadgeText: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  rangeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 4,
+  },
+  rangeLabel: {
+    fontSize: 12,
   },
   footer: {
     gap: 12,
