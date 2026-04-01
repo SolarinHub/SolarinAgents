@@ -15,6 +15,7 @@ type ModelSettings = {
   xtcProbability: number;
   xtcThreshold: number;
   typicalP: number;
+  includeThinkingTokens: boolean;
 };
 
 type ModelSettingsSamplingProps = {
@@ -161,6 +162,28 @@ const ModelSettingsSampling = ({
           />
         </View>
       )}
+
+      <View style={[styles.settingItem, styles.settingItemBorder]}>
+        <View style={styles.settingLeft}>
+          <View style={[styles.iconContainer, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}>
+            <MaterialCommunityIcons name="brain" size={22} color={iconColor} />
+          </View>
+          <View style={styles.settingTextContainer}>
+            <Text style={[styles.settingText, { color: themeColors.text }]}>
+              Count Thinking Tokens
+            </Text>
+            <Text style={[styles.settingDescription, { color: themeColors.secondaryText }]}>
+              Include reasoning tokens in the token count and speed stats.
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={modelSettings.includeThinkingTokens ?? false}
+          onValueChange={(value) => onSettingsChange({ includeThinkingTokens: value })}
+          trackColor={{ false: themeColors.borderColor, true: themeColors.primary + '80' }}
+          thumbColor={(modelSettings.includeThinkingTokens ?? false) ? themeColors.primary : themeColors.background}
+        />
+      </View>
 
       <SettingSlider
         label="Temperature"

@@ -202,6 +202,13 @@ export class MessageProcessingService {
         if (isThinking) {
           thinking += chunk.text;
           this.callbacks.setStreamingThinking(thinking.trim());
+          if (settings.includeThinkingTokens) {
+            const t = Date.now();
+            if (firstTokenTime === null && chunk.text.trim().length > 0) {
+              firstTokenTime = t - startTime;
+            }
+            tokenCount++;
+          }
           continue;
         }
 
@@ -938,13 +945,16 @@ export class MessageProcessingService {
           console.log(`local_token[${tokenCount}]`, JSON.stringify(chunk.text), { isThinking });
         }
 
-        if (firstTokenTime === null && !isThinking && chunk.text.trim().length > 0) {
+        if (firstTokenTime === null && (!isThinking || settings.includeThinkingTokens) && chunk.text.trim().length > 0) {
           firstTokenTime = Date.now() - startTime;
         }
 
         if (isThinking) {
           thinking += chunk.text;
           this.callbacks.setStreamingThinking(thinking.trim());
+          if (settings.includeThinkingTokens) {
+            tokenCount++;
+          }
         } else {
           tokenCount++;
           fullResponse += chunk.text;

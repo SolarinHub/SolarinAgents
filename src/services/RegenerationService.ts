@@ -577,11 +577,14 @@ export class RegenerationService {
 
           const currentTime = Date.now();
 
-          if (firstTokenTime === null && !isThinking && chunk.text.trim().length > 0) {
+          if (firstTokenTime === null && (!isThinking || (settings.includeThinkingTokens ?? false)) && chunk.text.trim().length > 0) {
             firstTokenTime = currentTime - startTime;
           }
 
-          tokenCount++;
+          const shouldCount = !isThinking || (settings.includeThinkingTokens ?? false);
+          if (shouldCount) {
+            tokenCount++;
+          }
           if (isThinking) {
             thinking += chunk.text;
             this.callbacks.setStreamingThinking(thinking.trim());
@@ -593,7 +596,7 @@ export class RegenerationService {
           const duration = (currentTime - startTime) / 1000;
           let avgTokenTime = undefined;
 
-          if (firstTokenTime !== null && tokenCount > 0 && !isThinking) {
+          if (firstTokenTime !== null && tokenCount > 0) {
             const timeAfterFirstToken = currentTime - (startTime + firstTokenTime);
             avgTokenTime = timeAfterFirstToken / Math.max(1, tokenCount);
           }
