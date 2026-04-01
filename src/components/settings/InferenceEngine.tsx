@@ -106,7 +106,7 @@ const InferenceEngineSection: React.FC<InferenceEngineProps> = ({
   return (
     <>
       <TouchableOpacity
-        style={[styles.settingItem, styles.settingItemBottomBorder]}
+        style={styles.settingItem}
         onPress={() => setModalVisible(true)}
       >
         <View style={styles.settingLeft}>

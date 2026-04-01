@@ -39,10 +39,6 @@ type ModelSettingsModalsProps = {
   showMlxWarning?: boolean;
 };
 
-const isStringDifferent = (current: string, defaultValue: string): boolean => {
-  return (current || '') !== (defaultValue || '');
-};
-
 const ModelSettingsModals = ({
   modelSettings,
   defaultSettings,
@@ -121,15 +117,6 @@ const ModelSettingsModals = ({
             </ScrollView>
 
             <View style={styles.modalFooter}>
-              {defaultSettings.grammar !== undefined && isStringDifferent(tempGrammar, defaultSettings.grammar) && (
-                <TouchableOpacity
-                  style={[styles.resetButton, { backgroundColor: themeColors.primary + '20' }]}
-                  onPress={() => setTempGrammar(defaultSettings.grammar || '')}
-                >
-                  <MaterialCommunityIcons name="refresh" size={20} color={themeColors.primary} />
-                  <Text style={[styles.resetText, { color: themeColors.primary }]}>Reset to Default</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 style={[styles.saveButton, { backgroundColor: themeColors.primary }]}
                 onPress={() => {
@@ -316,15 +303,6 @@ const ModelSettingsModals = ({
             </ScrollView>
 
             <View style={styles.modalFooter}>
-              {tempLogitBias !== '' && (
-                <TouchableOpacity
-                  style={[styles.resetButton, { backgroundColor: themeColors.primary + '20' }]}
-                  onPress={() => setTempLogitBias('')}
-                >
-                  <MaterialCommunityIcons name="refresh" size={20} color={themeColors.primary} />
-                  <Text style={[styles.resetText, { color: themeColors.primary }]}>Clear All</Text>
-                </TouchableOpacity>
-              )}
               <TouchableOpacity
                 style={[styles.saveButton, { backgroundColor: themeColors.primary }]}
                 onPress={() => {

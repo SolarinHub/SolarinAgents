@@ -163,15 +163,6 @@ const ModelSettingsAdvanced = ({
             {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
             )}
-            {(JSON.stringify(modelSettings.logitBias || []) !== JSON.stringify(defaultSettings.logitBias || [])) && (
-              <TouchableOpacity
-                onPress={() => onSettingsChange({ logitBias: defaultSettings.logitBias || [] })}
-                style={[styles.resetButton, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}
-              >
-                <MaterialCommunityIcons name="refresh" size={14} color={iconColor} />
-                <Text style={[styles.resetText, { color: iconColor }]}>Reset to Default</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={themeColors.secondaryText} />

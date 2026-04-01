@@ -20,10 +20,6 @@ type ModelSettingsControlsProps = {
   showMlxWarning?: boolean;
 };
 
-const isStringDifferent = (current: string, defaultValue: string): boolean => {
-  return (current || '') !== (defaultValue || '');
-};
-
 const isArrayDifferent = (current: any[] | undefined, defaultValue: any[] | undefined): boolean => {
   const currArray = current || [];
   const defArray = defaultValue || [];
@@ -134,15 +130,6 @@ const ModelSettingsControls = ({
             </Text>
             {showMlxWarning && (
               <Text style={styles.unsupportedText}>Unsupported on MLX</Text>
-            )}
-            {defaultSettings.grammar !== undefined && isStringDifferent(modelSettings.grammar, defaultSettings.grammar) && (
-              <TouchableOpacity
-                onPress={() => onSettingsChange({ grammar: defaultSettings.grammar })}
-                style={[styles.resetButton, { backgroundColor: currentTheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : themeColors.primary + '20' }]}
-              >
-                <MaterialCommunityIcons name="refresh" size={14} color={iconColor} />
-                <Text style={[styles.resetText, { color: iconColor }]}>Reset to Default</Text>
-              </TouchableOpacity>
             )}
           </View>
         </View>
