@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, Text, TouchableOpacity, Clipboard } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { theme } from '../constants/theme';
 import AppHeader from '../components/AppHeader';
+import { useStoredModels } from '../hooks/useStoredModels';
 
 const steps = [
   {
@@ -18,20 +20,25 @@ const steps = [
     body: 'Point any OpenAI-compatible client to your server. Set the base URL to http://<device-ip>:8889/v1. No API key is required — use any placeholder if the client requires one.',
   },
   {
-    title: '4. Set the Model Name',
-    body: 'Use the model name from the Models tab as the "model" field in your requests (e.g. "llama-3.2-1b"). The .gguf extension is optional.',
-  },
-  {
     title: '5. Send a Request',
     body: 'curl -X POST http://<device-ip>:8889/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -d \'{"model": "llama-3.2-1b", "messages": [{"role": "user", "content": "Hi"}]}\'',
   },
 ];
 
-
-
 export default function APISetupScreen() {
   const { theme: currentTheme } = useTheme();
   const themeColors = theme[currentTheme as 'light' | 'dark'];
+  const { storedModels } = useStoredModels();
+  const [copiedName, setCopiedName] = useState<string | null>(null);
+
+  const ggufModels = storedModels;
+
+  const copyName = (name: string) => {
+    const displayName = name.replace(/\.gguf$/i, '');
+    Clipboard.setString(displayName);
+    setCopiedName(name);
+    setTimeout(() => setCopiedName(null), 1500);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -48,22 +55,55 @@ export default function APISetupScreen() {
           Connect any OpenAI-compatible app to your local models. This works with any application or library that supports the OpenAI API. Both devices must be on the same local network.
         </Text>
 
-        {steps.map((step, i) => (
+        {steps.slice(0, 3).map((step, i) => (
           <View
             key={i}
             style={[styles.card, { backgroundColor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f7f9fc' }]}
           >
-            <Text style={[styles.stepTitle, { color: themeColors.text }]}>
-              {step.title}
-            </Text>
-            <Text
-              style={[
-                i === steps.length - 1 ? styles.codeText : styles.stepBody,
-                { color: themeColors.secondaryText },
-              ]}
-            >
-              {step.body}
-            </Text>
+            <Text style={[styles.stepTitle, { color: themeColors.text }]}>{step.title}</Text>
+            <Text style={[styles.stepBody, { color: themeColors.secondaryText }]}>{step.body}</Text>
+          </View>
+        ))}
+
+        <View style={[styles.card, { backgroundColor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f7f9fc' }]}>
+          <Text style={[styles.stepTitle, { color: themeColors.text }]}>4. Set the Model Name</Text>
+          <Text style={[styles.stepBody, { color: themeColors.secondaryText, marginBottom: ggufModels.length > 0 ? 12 : 0 }]}>
+            Use a model name below as the "model" field in your requests. The .gguf extension is optional.
+          </Text>
+          {ggufModels.length === 0 ? null : ggufModels.map((m) => {
+            const displayName = m.name.replace(/\.gguf$/i, '');
+            const copied = copiedName === m.name;
+            return (
+              <View
+                key={m.id}
+                style={[styles.modelRow, { borderColor: themeColors.borderColor }]}
+              >
+                <Text style={[styles.modelName, { color: themeColors.text }]} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.copyBtn, { backgroundColor: copied ? '#28a745' : (currentTheme === 'dark' ? 'rgba(255,255,255,0.1)' : themeColors.primary + '15') }]}
+                  onPress={() => copyName(m.name)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <MaterialCommunityIcons
+                    name={copied ? 'check' : 'content-copy'}
+                    size={15}
+                    color={copied ? '#fff' : themeColors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+
+        {steps.slice(3).map((step, i) => (
+          <View
+            key={i}
+            style={[styles.card, { backgroundColor: currentTheme === 'dark' ? 'rgba(255,255,255,0.06)' : '#f7f9fc' }]}
+          >
+            <Text style={[styles.stepTitle, { color: themeColors.text }]}>{step.title}</Text>
+            <Text style={[styles.codeText, { color: themeColors.secondaryText }]}>{step.body}</Text>
           </View>
         ))}
       </ScrollView>
@@ -107,6 +147,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     fontFamily: 'Courier',
+  },
+  modelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  modelName: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Courier',
+    marginRight: 8,
+  },
+  copyBtn: {
+    padding: 6,
+    borderRadius: 6,
   },
   note: {
     borderRadius: 12,
