@@ -456,13 +456,14 @@ export class StoredModelsManager extends EventEmitter {
 
   async registerModel(name: string, path: string, size: number): Promise<StoredModel> {
     return this.lock(async () => {
+      const sanitized = name.replace(/\s+/g, '_');
       const current = await this.getStoredModels();
-      const exists = current.some(m => m.name === name || m.path === path);
+      const exists = current.some(m => m.name === sanitized || m.path === path);
       if (exists) {
         throw new Error('Model already registered');
       }
 
-      const capabilities = detectVisionCapabilities(name);
+      const capabilities = detectVisionCapabilities(sanitized);
       const modelType = capabilities.isProjection
         ? ModelType.PROJECTION
         : capabilities.isVision
@@ -470,8 +471,8 @@ export class StoredModelsManager extends EventEmitter {
           : ModelType.LLM;
 
       const model: StoredModel = {
-        id: `${name}-${Date.now()}`,
-        name,
+        id: `${sanitized}-${Date.now()}`,
+        name: sanitized,
         path,
         size,
         modified: new Date().toISOString(),
@@ -595,11 +596,12 @@ export class StoredModelsManager extends EventEmitter {
 
   async linkExternalModel(uri: string, fileName: string): Promise<void> {
     return this.lock(async () => {
+      const sanitized = fileName.replace(/\s+/g, '_');
       const baseDir = this.fileManager.getBaseDir();
-      const destPath = `${baseDir}/${fileName}`;
+      const destPath = `${baseDir}/${sanitized}`;
       
       const stored = await this.getStoredModels();
-      const nameExists = stored.some(m => m.name === fileName);
+      const nameExists = stored.some(m => m.name === sanitized);
       if (nameExists) {
         throw new Error('A model with this name already exists');
       }
@@ -625,7 +627,7 @@ export class StoredModelsManager extends EventEmitter {
       });
 
       const size = (fileInfo as any).size || 0;
-      const capabilities = detectVisionCapabilities(fileName);
+      const capabilities = detectVisionCapabilities(sanitized);
       const modelType = capabilities.isProjection
         ? ModelType.PROJECTION
         : capabilities.isVision
@@ -633,8 +635,8 @@ export class StoredModelsManager extends EventEmitter {
           : ModelType.LLM;
 
       const newModel: StoredModel = {
-        id: `${fileName}-${Date.now()}`,
-        name: fileName,
+        id: `${sanitized}-${Date.now()}`,
+        name: sanitized,
         path: destPath,
         size,
         modified: new Date().toISOString(),
