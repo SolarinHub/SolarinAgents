@@ -357,9 +357,14 @@ export async function handleOpenAIChatCompletions(
       }
       logger.endStream(localSSEStreamId, Date.now() - localSSEBegun, 200);
       logger.logWebRequest(method, path, 200);
-    } catch {
-      try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
-      logger.logWebRequest(method, path, 500);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'MODEL_BUSY') {
+        try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
+        logger.logWebRequest(method, path, 503);
+      } else {
+        try { endSSEStream(socket); } catch { try { socket.destroy(); } catch {} }
+        logger.logWebRequest(method, path, 500);
+      }
     } finally {
       socket.removeListener('close', onClose);
     }
@@ -379,9 +384,12 @@ export async function handleOpenAIChatCompletions(
     });
     sendJSONResponse(socket, 200, buildCompletion(id, target.model.name, text as string));
     logger.logWebRequest(method, path, 200);
-  } catch {
-    sendJSONResponse(socket, 500, { error: { message: 'generation_failed', type: 'server_error' } });
-    logger.logWebRequest(method, path, 500);
+  } catch (err) {
+    const busy = err instanceof Error && err.message === 'MODEL_BUSY';
+    const status = busy ? 503 : 500;
+    const msg = busy ? 'model_busy' : 'generation_failed';
+    sendJSONResponse(socket, status, { error: { message: msg, type: 'server_error' } });
+    logger.logWebRequest(method, path, status);
   }
 }
 
