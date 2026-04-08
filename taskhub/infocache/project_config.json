@@ -1,0 +1,33 @@
+{
+  "projectName": "neuralab",
+  "environment": "development",
+
+  "logging": {
+    "level": "debug",
+    "destinations": ["console", "file", "remote"],
+    "filePath": "./logs/neuralab.log",
+    "rotation": {
+      "enabled": true,
+      "maxSizeMb": 10,
+      "maxFiles": 5
+    }
+  },
+
+  "features": {
+    "enableDiagnostics": true,
+    "enableRealTimeAlerts": false,
+    "enableMetrics": true,
+    "enableTracing": false
+  },
+
+  "security": {
+    "sanitizeInputs": true,
+    "validateSchemas": true
+  },
+
+  "api": {
+    "baseUrl": "https://api.neuralab.local",
+    "timeoutMs": 15000,
+    "retryAttempts": 3
+  }
+}

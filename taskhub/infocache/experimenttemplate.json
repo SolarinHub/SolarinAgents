@@ -1,0 +1,25 @@
+{
+  "experimentId": "exp-001",
+  "createdAt": "2025-09-25T00:00:00Z",
+  "description": "Volatility analysis for SOL/USDC pool",
+  "parameters": {
+    "tokenSymbol": "SOL",
+    "analysisWindowMinutes": 60,
+    "volatilityThreshold": 0.05,
+    "liquidityThresholdUsd": 100000,
+    "flagsMask": 0,
+    "includeWhaleTracking": true
+  },
+  "status": "draft", 
+  "results": {
+    "volatilityScore": null,
+    "riskScore": null,
+    "trendSegments": [],
+    "detectedPatterns": []
+  },
+  "metrics": {
+    "runtimeMs": null,
+    "dataPointsAnalyzed": null
+  },
+  "notes": "Initial run pending"
+}
